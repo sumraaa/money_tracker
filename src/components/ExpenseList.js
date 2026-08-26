@@ -17,7 +17,7 @@ const CATEGORY_EMOJIS = {
   'Transport': '🚗',
 };
 
-export default function ExpenseList({ expenses, onRefresh, syncStatus }) {
+export default function ExpenseList({ expenses, onRefresh, syncStatus, onQuickLog }) {
   const handleDelete = (id, category, expense) => {
     Alert.alert(
       'Delete Expense',
@@ -130,20 +130,31 @@ export default function ExpenseList({ expenses, onRefresh, syncStatus }) {
         </View>
       </View>
 
-      {/* Sync Status Banner if active */}
-      {syncStatus?.message ? (
-        <View style={styles.syncBanner}>
-          <Text style={styles.syncBannerText}>
-            {syncStatus.isOnline ? '🌐' : '📡'} {syncStatus.message}
-          </Text>
+      {/* ── Quick Log CTA Block ── */}
+      <TouchableOpacity
+        activeOpacity={0.82}
+        style={styles.quickLogBlock}
+        onPress={onQuickLog}
+      >
+        <View style={styles.quickLogLeft}>
+          <View style={styles.quickLogIconWrap}>
+            <Text style={styles.quickLogIcon}>⚡</Text>
+          </View>
+          <View>
+            <Text style={styles.quickLogTitle}>Quick Log</Text>
+            <Text style={styles.quickLogSub}>Tap to record an expense instantly</Text>
+          </View>
         </View>
-      ) : null}
+        <View style={styles.quickLogArrow}>
+          <Text style={styles.quickLogArrowText}>›</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* List Header */}
       <View style={styles.listHeader}>
         <Text style={styles.listHeaderTitle}>Recent Activity</Text>
         <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-          <Text style={styles.refreshText}>Sync Now 🔄</Text>
+          <Text style={styles.refreshText}>Sync 🔄</Text>
         </TouchableOpacity>
       </View>
 
@@ -262,9 +273,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 120,
+    paddingBottom: 40,
     gap: 12,
   },
+  // Quick Log CTA Block
+  quickLogBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(14,165,233,0.1)',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 20,
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  quickLogLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  quickLogIconWrap: {
+    width: 42, height: 42, borderRadius: 14,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(56,189,248,0.3)',
+  },
+  quickLogIcon: { fontSize: 20 },
+  quickLogTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
+  quickLogSub: { color: '#38BDF8', fontSize: 11, fontWeight: '500', marginTop: 2, opacity: 0.8 },
+  quickLogArrow: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  quickLogArrowText: { color: '#38BDF8', fontSize: 20, fontWeight: '300', lineHeight: 24 },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',

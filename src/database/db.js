@@ -174,6 +174,83 @@ export const deleteExpense = async (id) => {
 };
 
 /**
+ * Get expenses aggregated by timeframe for chart + history display.
+ * @param {'week'|'month'|'year'} timeframe
+ * @returns {{ chartData: Array<{day: string, value: number}>, expenses: Array }}
+ */
+export const getExpensesByTimeframe = async (timeframe = 'week') => {
+  try {
+    const db = await getDb();
+    const now = new Date();
+    let startDate;
+
+    if (timeframe === 'week') {
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 6);
+    } else if (timeframe === 'month') {
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 29);
+    } else {
+      // year
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 364);
+    }
+
+    const startIso = startDate.toISOString();
+
+    // Raw expense list for history view
+    const expenses = await db.getAllAsync(
+      `SELECT * FROM expenses WHERE date_time >= ? ORDER BY date_time DESC;`,
+      [startIso]
+    );
+
+    // Aggregate daily totals for the chart
+    const aggregated = await db.getAllAsync(
+      `SELECT substr(date_time, 1, 10) AS day, SUM(expense) AS total
+       FROM expenses
+       WHERE date_time >= ?
+       GROUP BY day
+       ORDER BY day ASC;`,
+      [startIso]
+    );
+
+    // Build a dense day-by-day array (fill gaps with 0)
+    const chartMap = {};
+    (aggregated || []).forEach((row) => {
+      chartMap[row.day] = row.total;
+    });
+
+    const chartData = [];
+    const cursor = new Date(startDate);
+    cursor.setHours(0, 0, 0, 0);
+
+    while (cursor <= now) {
+      const dayKey = cursor.toISOString().slice(0, 10);
+      chartData.push({
+        day: dayKey,
+        value: chartMap[dayKey] ? parseFloat(chartMap[dayKey].toFixed(2)) : 0,
+        label:
+          timeframe === 'week'
+            ? cursor.toLocaleDateString('en-IN', { weekday: 'short' })
+            : timeframe === 'month'
+            ? cursor.getDate() % 5 === 1 || cursor.getDate() === 1
+              ? cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+              : ''
+            : cursor.getDate() === 1
+            ? cursor.toLocaleDateString('en-IN', { month: 'short' })
+            : '',
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return { chartData, expenses: expenses || [] };
+  } catch (error) {
+    console.error('[SQLite] Error in getExpensesByTimeframe:', error);
+    return { chartData: [], expenses: [] };
+  }
+};
+
+/**
  * Custom Categories CRUD
  */
 export const getCustomCategories = async () => {
