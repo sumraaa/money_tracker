@@ -5,12 +5,10 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { Home, BarChart2, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { COLORS, SPACING, RADIUS, ANIMATION } from '../constants/theme';
 
 const TABS = [
   { id: 'home', label: 'Log', Icon: Home },
@@ -18,33 +16,21 @@ const TABS = [
   { id: 'history', label: 'History', Icon: Clock },
 ];
 
-const NEON = '#38BDF8'; // electric cyan accent
-const INACTIVE = '#52525B';
-
 export default function CustomTabBar({ activeTab, onTabPress }) {
   const scales = useRef(TABS.map(() => new Animated.Value(1))).current;
-  const glows = useRef(TABS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     TABS.forEach((tab, idx) => {
-      const isActive = tab.id === activeTab;
-      Animated.parallel([
-        Animated.spring(scales[idx], {
-          toValue: isActive ? 1.18 : 1,
-          useNativeDriver: true,
-          friction: 6,
-          tension: 80,
-        }),
-        Animated.timing(glows[idx], {
-          toValue: isActive ? 1 : 0,
-          duration: 220,
-          useNativeDriver: false,
-        }),
-      ]).start();
+      Animated.spring(scales[idx], {
+        toValue: tab.id === activeTab ? 1.08 : 1,
+        useNativeDriver: true,
+        friction: ANIMATION.spring.friction,
+        tension: ANIMATION.spring.tension,
+      }).start();
     });
   }, [activeTab]);
 
-  const handlePress = (tabId, idx) => {
+  const handlePress = (tabId) => {
     if (tabId === activeTab) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onTabPress(tabId);
@@ -52,39 +38,32 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
 
   return (
     <View style={styles.wrapper}>
-      {/* Blurred glass surface */}
       <View style={styles.container}>
         {TABS.map((tab, idx) => {
           const isActive = tab.id === activeTab;
-          const labelColor = glows[idx].interpolate({
-            inputRange: [0, 1],
-            outputRange: [INACTIVE, NEON],
-          });
-
           return (
             <TouchableOpacity
               key={tab.id}
-              activeOpacity={0.75}
+              activeOpacity={0.7}
               style={styles.tabBtn}
-              onPress={() => handlePress(tab.id, idx)}
+              onPress={() => handlePress(tab.id)}
             >
               <Animated.View
                 style={[
                   styles.iconWrap,
+                  isActive && styles.iconWrapActive,
                   { transform: [{ scale: scales[idx] }] },
                 ]}
               >
-                {/* Glow halo behind icon when active */}
-                {isActive && <View style={styles.iconGlow} />}
                 <tab.Icon
-                  size={22}
-                  color={isActive ? NEON : INACTIVE}
-                  strokeWidth={isActive ? 2.2 : 1.8}
+                  size={20}
+                  color={isActive ? COLORS.accent : COLORS.textMuted}
+                  strokeWidth={isActive ? 2.2 : 1.6}
                 />
               </Animated.View>
-              <Animated.Text style={[styles.tabLabel, { color: labelColor }]}>
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                 {tab.label}
-              </Animated.Text>
+              </Text>
               {isActive && <View style={styles.activeDot} />}
             </TouchableOpacity>
           );
@@ -96,53 +75,49 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    paddingTop: 4,
-    backgroundColor: '#000000',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    paddingTop: SPACING.xs,
+    backgroundColor: COLORS.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
   },
   container: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     position: 'relative',
   },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
+    borderRadius: RADIUS.md,
   },
-  iconGlow: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(56,189,248,0.14)',
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 12,
-    elevation: 6,
+  iconWrapActive: {
+    backgroundColor: COLORS.accentMuted,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
+    fontWeight: '600',
+    letterSpacing: 0.3,
     marginTop: 3,
+    color: COLORS.textMuted,
+  },
+  tabLabelActive: {
+    color: COLORS.accent,
+    fontWeight: '700',
   },
   activeDot: {
     position: 'absolute',
@@ -150,10 +125,6 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: NEON,
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    backgroundColor: COLORS.accent,
   },
 });

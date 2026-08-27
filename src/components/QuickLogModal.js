@@ -9,50 +9,76 @@ import {
   Keyboard,
   Animated,
   Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import CategoryGrid from './CategoryGrid';
 import Numpad from './Numpad';
-import { addExpense, getCustomCategories, addCustomCategory } from '../database/db';
+import { addExpense, getCustomCategories, addCustomCategory, getRecentMerchants } from '../database/db';
 import { triggerSync } from '../services/SyncService';
+import { COLORS, SPACING, RADIUS, PAYMENT_METHODS, MERCHANT_HINTS } from '../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
   const [amount, setAmount] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Fast Food & Swiggy');
+  const [selectedCategory, setSelectedCategory] = useState('Food');
+  const [merchant, setMerchant] = useState('');
   const [message, setMessage] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [customCategories, setCustomCategories] = useState([]);
+  const [recentMerchants, setRecentMerchants] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isNoteFocused, setIsNoteFocused] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const translateY = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   useEffect(() => {
     if (visible) {
-      loadCategories();
+      loadData();
       setAmount('');
+      setMerchant('');
       setMessage('');
-      // Fluid spring animation with tactile physics
+      setShowSuccess(false);
       Animated.spring(translateY, {
         toValue: 0,
         useNativeDriver: true,
-        friction: 7,
-        tension: 45,
+        friction: 8,
+        tension: 50,
       }).start();
     } else {
       Animated.timing(translateY, {
         toValue: SCREEN_HEIGHT,
-        duration: 220,
+        duration: 200,
         useNativeDriver: true,
       }).start();
     }
   }, [visible]);
 
-  const loadCategories = async () => {
-    const custom = await getCustomCategories();
+  const loadData = async () => {
+    const [custom, merchants] = await Promise.all([
+      getCustomCategories(),
+      getRecentMerchants(8),
+    ]);
     setCustomCategories(Array.isArray(custom) ? custom : []);
+    setRecentMerchants(Array.isArray(merchants) ? merchants : []);
+  };
+
+  // Smart category detection from merchant name
+  const handleMerchantChange = (text) => {
+    setMerchant(text);
+    if (text.trim().length >= 2) {
+      const lower = text.toLowerCase().trim();
+      for (const [key, cat] of Object.entries(MERCHANT_HINTS)) {
+        if (lower.includes(key)) {
+          setSelectedCategory(cat);
+          break;
+        }
+      }
+    }
   };
 
   const handleAddCustom = async (name, icon) => {
@@ -60,7 +86,7 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
     const safeIcon = icon || '🏷️';
     if (!safeName) return;
     await addCustomCategory(safeName, safeIcon);
-    await loadCategories();
+    await loadData();
   };
 
   const handleSubmit = async () => {
@@ -70,7 +96,8 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
       return;
     }
 
-    const safeCategory = (selectedCategory || '').trim() || 'Fast Food & Swiggy';
+    const safeCategory = (selectedCategory || '').trim() || 'Food';
+    const safeMerchant = (merchant || '').trim();
     const safeMessage = (message || '').trim();
 
     setIsSubmitting(true);
@@ -81,11 +108,14 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
         expense: numericAmount,
         date_time: new Date().toISOString(),
         message: safeMessage,
+        merchant: safeMerchant,
+        payment_method: paymentMethod,
       });
 
-      // Heavy success vibration feedback on successful expense upload
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+      // Show brief success state
+      setShowSuccess(true);
 
       triggerSync().catch((err) =>
         console.log('[Background Sync] Offline queue active:', err)
@@ -95,10 +125,15 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
         onExpenseAdded(newExpense);
       }
 
-      setAmount('');
-      setMessage('');
-      setIsSubmitting(false);
-      onClose();
+      // Auto-close after brief success flash
+      setTimeout(() => {
+        setAmount('');
+        setMerchant('');
+        setMessage('');
+        setIsSubmitting(false);
+        setShowSuccess(false);
+        onClose();
+      }, 600);
     } catch (error) {
       console.error('[QuickLogModal] Submit error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -132,7 +167,7 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
           onTouchEnd={(e) => e.stopPropagation()}
         >
           <SafeAreaView edges={['bottom']}>
-            {/* Sheet Drag Handle */}
+            {/* Handle */}
             <View style={styles.header}>
               <View style={styles.sheetHandle} />
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -140,58 +175,130 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
               </TouchableOpacity>
             </View>
 
-            {/* INR Hero Amount Display */}
-            <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>₹</Text>
-              <Text style={styles.amountDisplay}>
-                {amount || '0'}
-              </Text>
-            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Amount Display */}
+              <View style={styles.amountContainer}>
+                <Text style={styles.currencySymbol}>₹</Text>
+                <Text style={styles.amountDisplay}>
+                  {amount || '0'}
+                </Text>
+              </View>
 
-            {/* Category Grid */}
-            <CategoryGrid
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-              customCategories={customCategories}
-              onAddCustomCategory={handleAddCustom}
-            />
+              {/* Merchant input with suggestions */}
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.merchantInput}
+                  placeholder="Merchant (e.g. Swiggy)"
+                  placeholderTextColor={COLORS.textDisabled}
+                  value={merchant}
+                  onChangeText={handleMerchantChange}
+                  maxLength={50}
+                />
+              </View>
 
-            {/* Optional Note Input with Focus Glow */}
-            <View style={styles.inputWrapper}>
+              {/* Recent merchant chips */}
+              {recentMerchants.length > 0 && !merchant && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.suggestionsRow}
+                  contentContainerStyle={styles.suggestionsContent}
+                >
+                  {recentMerchants.map((m, i) => (
+                    <TouchableOpacity
+                      key={`${m.merchant}-${i}`}
+                      style={styles.suggestionChip}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setMerchant(m.merchant);
+                        if (m.category) setSelectedCategory(m.category);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{m.merchant}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Category */}
+              <CategoryGrid
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                customCategories={customCategories}
+                onAddCustomCategory={handleAddCustom}
+              />
+
+              {/* Payment method */}
+              <View style={styles.paymentSection}>
+                <Text style={styles.sectionLabel}>PAYMENT</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.paymentContent}
+                >
+                  {PAYMENT_METHODS.map((pm) => (
+                    <TouchableOpacity
+                      key={pm.id}
+                      style={[
+                        styles.paymentChip,
+                        paymentMethod === pm.name && styles.paymentChipActive,
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setPaymentMethod(pm.name);
+                      }}
+                    >
+                      <Text style={styles.paymentIcon}>{pm.icon}</Text>
+                      <Text
+                        style={[
+                          styles.paymentText,
+                          paymentMethod === pm.name && styles.paymentTextActive,
+                        ]}
+                      >
+                        {pm.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Note */}
               <TextInput
-                style={[
-                  styles.messageInput,
-                  isNoteFocused && styles.messageInputFocused,
-                ]}
-                placeholder="Add optional note (e.g. Swiggy order)..."
-                placeholderTextColor="#71717A"
+                style={styles.noteInput}
+                placeholder="Add a note (optional)"
+                placeholderTextColor={COLORS.textDisabled}
                 value={message}
                 onChangeText={setMessage}
-                onFocus={() => setIsNoteFocused(true)}
-                onBlur={() => setIsNoteFocused(false)}
                 maxLength={100}
               />
-            </View>
 
-            {/* Circular Tactile Numpad */}
-            <Numpad value={amount} onChange={setAmount} />
+              {/* Numpad */}
+              <Numpad value={amount} onChange={setAmount} />
 
-            {/* Upload CTA Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
-              style={[
-                styles.uploadBtn,
-                (!amount || parseFloat(amount) <= 0) && styles.uploadBtnDisabled,
-              ]}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.uploadBtnText}>
-                {isSubmitting
-                  ? 'LOGGING EXPENSE...'
-                  : `⚡ UPLOAD EXPENSE ${amount ? `(₹${amount})` : ''}`}
-              </Text>
-            </TouchableOpacity>
+              {/* Save Button */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+                style={[
+                  styles.saveBtn,
+                  (!amount || parseFloat(amount) <= 0) && styles.saveBtnDisabled,
+                  showSuccess && styles.saveBtnSuccess,
+                ]}
+                onPress={handleSubmit}
+              >
+                <Text style={styles.saveBtnText}>
+                  {showSuccess
+                    ? '✓ Saved'
+                    : isSubmitting
+                    ? 'Saving...'
+                    : `Save${amount ? ` ₹${amount}` : ''}`}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </SafeAreaView>
         </Animated.View>
       </TouchableOpacity>
@@ -202,108 +309,171 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.88)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#000000',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    maxHeight: SCREEN_HEIGHT * 0.94,
+    backgroundColor: COLORS.bg,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.borderStrong,
+    maxHeight: SCREEN_HEIGHT * 0.92,
+  },
+  scrollContent: {
+    paddingBottom: SPACING.lg,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     position: 'relative',
   },
   sheetHandle: {
-    width: 38,
+    width: 36,
     height: 4,
-    backgroundColor: '#3F3F46',
+    backgroundColor: COLORS.bgHover,
     borderRadius: 2,
   },
   closeBtn: {
     position: 'absolute',
     right: 0,
     top: -4,
-    padding: 6,
+    padding: SPACING.sm,
   },
   closeBtnText: {
-    color: '#71717A',
-    fontSize: 18,
-    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontSize: 16,
+    fontWeight: '500',
   },
   amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 12,
-    paddingVertical: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: SPACING.md,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: RADIUS.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   currencySymbol: {
-    color: '#60A5FA',
-    fontSize: 36,
-    fontWeight: '900',
-    marginRight: 8,
+    color: COLORS.accent,
+    fontSize: 30,
+    fontWeight: '800',
+    marginRight: SPACING.sm,
   },
   amountDisplay: {
-    color: '#FFFFFF',
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: 1,
+    color: COLORS.textPrimary,
+    fontSize: 38,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    fontVariant: ['tabular-nums'],
   },
-  inputWrapper: {
-    marginVertical: 8,
+  inputRow: {
+    marginBottom: SPACING.xs,
   },
-  messageInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    color: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  merchantInput: {
+    backgroundColor: COLORS.bgElevated,
+    color: COLORS.textPrimary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
     fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
-  messageInputFocused: {
-    borderColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
+  suggestionsRow: {
+    marginBottom: SPACING.sm,
+    maxHeight: 36,
   },
-  uploadBtn: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 18,
-    borderRadius: 100,
+  suggestionsContent: {
+    gap: SPACING.sm,
+  },
+  suggestionChip: {
+    backgroundColor: COLORS.bgSurface,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+  },
+  suggestionText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  paymentSection: {
+    marginVertical: SPACING.sm,
+  },
+  sectionLabel: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  paymentContent: {
+    gap: SPACING.sm,
+  },
+  paymentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgSurface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    gap: 4,
+  },
+  paymentChipActive: {
+    backgroundColor: COLORS.accentMuted,
+    borderColor: COLORS.accent,
+  },
+  paymentIcon: {
+    fontSize: 12,
+  },
+  paymentText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  paymentTextActive: {
+    color: COLORS.textPrimary,
+    fontWeight: '700',
+  },
+  noteInput: {
+    backgroundColor: COLORS.bgElevated,
+    color: COLORS.textPrimary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
+    fontSize: 13,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
+  },
+  saveBtn: {
+    backgroundColor: COLORS.accentStrong,
+    paddingVertical: 16,
+    borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    elevation: 8,
+    marginTop: SPACING.xs,
   },
-  uploadBtnDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    shadowOpacity: 0,
-    elevation: 0,
+  saveBtnDisabled: {
+    backgroundColor: COLORS.bgSurface,
   },
-  uploadBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
+  saveBtnSuccess: {
+    backgroundColor: '#059669',
+  },
+  saveBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

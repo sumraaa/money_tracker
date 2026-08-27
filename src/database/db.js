@@ -25,32 +25,118 @@ const toSqlParam = (val, fallback = '') => {
   return String(val);
 };
 
+// ─── Schema Migrations ──────────────────────────────────────────
+// Each migration runs exactly once per version bump.
+// NEVER drops tables or deletes user data.
+// ─────────────────────────────────────────────────────────────────
+
+const MIGRATIONS = [
+  {
+    version: 1,
+    description: 'Initial schema',
+    up: async (db) => {
+      await db.execAsync(`
+        PRAGMA journal_mode = WAL;
+        CREATE TABLE IF NOT EXISTS expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT NOT NULL,
+          expense REAL NOT NULL,
+          date_time TEXT NOT NULL,
+          message TEXT,
+          sync_status INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS custom_categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          icon TEXT,
+          color TEXT
+        );
+      `);
+    },
+  },
+  {
+    version: 2,
+    description: 'Add merchant, payment_method, is_recurring, updated_at',
+    up: async (db) => {
+      // SQLite ALTER TABLE only supports adding one column at a time
+      const cols = await getColumnNames(db, 'expenses');
+      if (!cols.includes('merchant')) {
+        await db.execAsync(`ALTER TABLE expenses ADD COLUMN merchant TEXT DEFAULT '';`);
+      }
+      if (!cols.includes('payment_method')) {
+        await db.execAsync(`ALTER TABLE expenses ADD COLUMN payment_method TEXT DEFAULT 'UPI';`);
+      }
+      if (!cols.includes('is_recurring')) {
+        await db.execAsync(`ALTER TABLE expenses ADD COLUMN is_recurring INTEGER DEFAULT 0;`);
+      }
+      if (!cols.includes('updated_at')) {
+        await db.execAsync(`ALTER TABLE expenses ADD COLUMN updated_at DATETIME;`);
+      }
+    },
+  },
+  {
+    version: 3,
+    description: 'Add budgets table and settings table',
+    up: async (db) => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS budgets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT,
+          monthly_limit REAL NOT NULL DEFAULT 0,
+          is_overall INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT
+        );
+      `);
+    },
+  },
+];
+
+async function getColumnNames(db, tableName) {
+  try {
+    const rows = await db.getAllAsync(`PRAGMA table_info(${tableName});`);
+    return (rows || []).map((r) => r.name);
+  } catch {
+    return [];
+  }
+}
+
+async function getCurrentVersion(db) {
+  try {
+    // Use settings table or user_version pragma
+    const result = await db.getFirstAsync(`PRAGMA user_version;`);
+    return result?.user_version ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function setVersion(db, version) {
+  await db.execAsync(`PRAGMA user_version = ${version};`);
+}
+
 /**
- * Initialize the SQLite Database & Schema
+ * Initialize the SQLite Database & run migrations.
  */
 export const initDatabase = async () => {
   try {
     const db = await getDb();
-    
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category TEXT NOT NULL,
-        expense REAL NOT NULL,
-        date_time TEXT NOT NULL,
-        message TEXT,
-        sync_status INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE TABLE IF NOT EXISTS custom_categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        icon TEXT,
-        color TEXT
-      );
-    `);
+    await db.execAsync(`PRAGMA journal_mode = WAL;`);
+
+    const currentVersion = await getCurrentVersion(db);
+    console.log(`[SQLite] Current DB version: ${currentVersion}`);
+
+    for (const migration of MIGRATIONS) {
+      if (migration.version > currentVersion) {
+        console.log(`[SQLite] Running migration v${migration.version}: ${migration.description}`);
+        await migration.up(db);
+        await setVersion(db, migration.version);
+      }
+    }
 
     console.log('[SQLite] Database initialized successfully');
   } catch (error) {
@@ -59,34 +145,34 @@ export const initDatabase = async () => {
   }
 };
 
+// ─── CRUD Operations ─────────────────────────────────────────────
+
 /**
  * Add a new expense (Offline-First: saved with sync_status = 0)
  */
 export const addExpense = async (params = {}) => {
   try {
     const db = await getDb();
-    
-    const rawCategory = params?.category;
-    const rawExpense = params?.expense;
-    const rawDateTime = params?.date_time;
-    const rawMessage = params?.message;
 
-    const safeCategory = toSqlParam(rawCategory, 'Uncategorized').trim() || 'Uncategorized';
-    const numericAmount = parseFloat(rawExpense);
+    const safeCategory = toSqlParam(params?.category, 'Other').trim() || 'Other';
+    const numericAmount = parseFloat(params?.expense);
     const safeExpense = isNaN(numericAmount) ? 0 : numericAmount;
-    const safeDateTime = toSqlParam(rawDateTime, new Date().toISOString());
-    const safeMessage = toSqlParam(rawMessage, '').trim();
+    const safeDateTime = toSqlParam(params?.date_time, new Date().toISOString());
+    const safeMessage = toSqlParam(params?.message, '').trim();
+    const safeMerchant = toSqlParam(params?.merchant, '').trim();
+    const safePaymentMethod = toSqlParam(params?.payment_method, 'UPI');
+    const safeIsRecurring = params?.is_recurring ? 1 : 0;
 
     if (safeExpense <= 0) {
       throw new Error('Invalid expense amount');
     }
 
-    const sqlParams = [safeCategory, safeExpense, safeDateTime, safeMessage];
-    const cleanSqlParams = sqlParams.map((p) => toSqlParam(p, ''));
+    const now = new Date().toISOString();
 
     const result = await db.runAsync(
-      `INSERT INTO expenses (category, expense, date_time, message, sync_status) VALUES (?, ?, ?, ?, 0);`,
-      cleanSqlParams
+      `INSERT INTO expenses (category, expense, date_time, message, merchant, payment_method, is_recurring, sync_status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?);`,
+      [safeCategory, safeExpense, safeDateTime, safeMessage, safeMerchant, safePaymentMethod, safeIsRecurring, now, now]
     );
 
     console.log(`[SQLite] Expense added with ID: ${result.lastInsertRowId}`);
@@ -96,11 +182,94 @@ export const addExpense = async (params = {}) => {
       expense: safeExpense,
       date_time: safeDateTime,
       message: safeMessage,
-      sync_status: 0
+      merchant: safeMerchant,
+      payment_method: safePaymentMethod,
+      is_recurring: safeIsRecurring,
+      sync_status: 0,
+      created_at: now,
+      updated_at: now,
     };
   } catch (error) {
     console.error('[SQLite] Error adding expense:', error);
     throw error;
+  }
+};
+
+/**
+ * Update an existing expense by ID.
+ */
+export const updateExpense = async (id, params = {}) => {
+  try {
+    const db = await getDb();
+    const safeId = Number(id);
+    if (isNaN(safeId) || safeId <= 0) throw new Error('Invalid expense ID');
+
+    const fields = [];
+    const values = [];
+
+    if (params.category !== undefined) {
+      fields.push('category = ?');
+      values.push(toSqlParam(params.category, 'Other'));
+    }
+    if (params.expense !== undefined) {
+      const num = parseFloat(params.expense);
+      if (isNaN(num) || num <= 0) throw new Error('Invalid amount');
+      fields.push('expense = ?');
+      values.push(num);
+    }
+    if (params.date_time !== undefined) {
+      fields.push('date_time = ?');
+      values.push(toSqlParam(params.date_time, new Date().toISOString()));
+    }
+    if (params.message !== undefined) {
+      fields.push('message = ?');
+      values.push(toSqlParam(params.message, ''));
+    }
+    if (params.merchant !== undefined) {
+      fields.push('merchant = ?');
+      values.push(toSqlParam(params.merchant, ''));
+    }
+    if (params.payment_method !== undefined) {
+      fields.push('payment_method = ?');
+      values.push(toSqlParam(params.payment_method, 'UPI'));
+    }
+    if (params.is_recurring !== undefined) {
+      fields.push('is_recurring = ?');
+      values.push(params.is_recurring ? 1 : 0);
+    }
+
+    if (fields.length === 0) return;
+
+    // Mark as needing re-sync after edit
+    fields.push('sync_status = 0');
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(safeId);
+
+    await db.runAsync(
+      `UPDATE expenses SET ${fields.join(', ')} WHERE id = ?;`,
+      values
+    );
+    console.log(`[SQLite] Expense ${safeId} updated`);
+  } catch (error) {
+    console.error('[SQLite] Error updating expense:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a single expense by ID.
+ */
+export const getExpenseById = async (id) => {
+  try {
+    const db = await getDb();
+    const safeId = Number(id);
+    if (isNaN(safeId) || safeId <= 0) return null;
+    const row = await db.getFirstAsync(`SELECT * FROM expenses WHERE id = ?;`, [safeId]);
+    return row || null;
+  } catch (error) {
+    console.error('[SQLite] Error getting expense:', error);
+    return null;
   }
 };
 
@@ -111,7 +280,7 @@ export const getUnsyncedExpenses = async () => {
   try {
     const db = await getDb();
     const rows = await db.getAllAsync(
-      `SELECT id, category, expense, date_time, message, sync_status FROM expenses WHERE sync_status = 0 ORDER BY id ASC;`
+      `SELECT * FROM expenses WHERE sync_status = 0 ORDER BY id ASC;`
     );
     return rows || [];
   } catch (error) {
@@ -142,20 +311,108 @@ export const markExpensesAsSynced = async (ids = []) => {
 };
 
 /**
- * Get all expenses for history view
+ * Get all expenses for history view with optional filters.
  */
-export const getAllExpenses = async (limit = 50) => {
+export const getAllExpenses = async (options = {}) => {
   try {
     const db = await getDb();
-    const safeLimit = Number(limit) && limit > 0 ? Number(limit) : 50;
-    const rows = await db.getAllAsync(
-      `SELECT * FROM expenses ORDER BY date_time DESC LIMIT ?;`,
-      [safeLimit]
-    );
+    const {
+      limit = 100,
+      offset = 0,
+      startDate,
+      endDate,
+      category,
+      paymentMethod,
+      search,
+      sortBy = 'date_time',
+      sortOrder = 'DESC',
+      minAmount,
+      maxAmount,
+    } = options;
+
+    let query = 'SELECT * FROM expenses WHERE 1=1';
+    const params = [];
+
+    if (startDate) {
+      query += ' AND date_time >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND date_time <= ?';
+      params.push(endDate);
+    }
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
+    }
+    if (paymentMethod) {
+      query += ' AND payment_method = ?';
+      params.push(paymentMethod);
+    }
+    if (search) {
+      query += ' AND (merchant LIKE ? OR message LIKE ? OR category LIKE ?)';
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam);
+    }
+    if (minAmount !== undefined && minAmount !== null) {
+      query += ' AND expense >= ?';
+      params.push(Number(minAmount));
+    }
+    if (maxAmount !== undefined && maxAmount !== null) {
+      query += ' AND expense <= ?';
+      params.push(Number(maxAmount));
+    }
+
+    // Validate sort column
+    const validSortCols = ['date_time', 'expense', 'category', 'created_at'];
+    const safeSortBy = validSortCols.includes(sortBy) ? sortBy : 'date_time';
+    const safeSortOrder = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    query += ` ORDER BY ${safeSortBy} ${safeSortOrder}`;
+    query += ` LIMIT ? OFFSET ?`;
+    params.push(Number(limit) || 100, Number(offset) || 0);
+
+    const rows = await db.getAllAsync(query, params);
     return rows || [];
   } catch (error) {
-    console.error('[SQLite] Error fetching all expenses:', error);
+    console.error('[SQLite] Error fetching expenses:', error);
     return [];
+  }
+};
+
+/**
+ * Count total expenses (with optional filters for pagination).
+ */
+export const countExpenses = async (options = {}) => {
+  try {
+    const db = await getDb();
+    const { startDate, endDate, category, search } = options;
+
+    let query = 'SELECT COUNT(*) as count FROM expenses WHERE 1=1';
+    const params = [];
+
+    if (startDate) {
+      query += ' AND date_time >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND date_time <= ?';
+      params.push(endDate);
+    }
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
+    }
+    if (search) {
+      query += ' AND (merchant LIKE ? OR message LIKE ? OR category LIKE ?)';
+      const s = `%${search}%`;
+      params.push(s, s, s);
+    }
+
+    const result = await db.getFirstAsync(query, params);
+    return result?.count ?? 0;
+  } catch (error) {
+    return 0;
   }
 };
 
@@ -168,15 +425,116 @@ export const deleteExpense = async (id) => {
     const safeId = Number(id);
     if (isNaN(safeId) || safeId <= 0) return;
     await db.runAsync(`DELETE FROM expenses WHERE id = ?;`, [safeId]);
+    console.log(`[SQLite] Expense ${safeId} deleted`);
   } catch (error) {
     console.error('[SQLite] Error deleting expense:', error);
   }
 };
 
 /**
- * Get expenses aggregated by timeframe for chart + history display.
- * @param {'week'|'month'|'year'} timeframe
- * @returns {{ chartData: Array<{day: string, value: number}>, expenses: Array }}
+ * Get daily totals for chart.
+ */
+export const getDailyTotals = async (startDate, endDate) => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(
+      `SELECT substr(date_time, 1, 10) AS day, SUM(expense) AS total, COUNT(*) AS count
+       FROM expenses
+       WHERE date_time >= ? AND date_time <= ?
+       GROUP BY day
+       ORDER BY day ASC;`,
+      [startDate, endDate || new Date().toISOString()]
+    );
+    return rows || [];
+  } catch (error) {
+    console.error('[SQLite] Error getting daily totals:', error);
+    return [];
+  }
+};
+
+/**
+ * Get category breakdown for a period.
+ */
+export const getCategoryBreakdown = async (startDate, endDate) => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(
+      `SELECT category, SUM(expense) AS total, COUNT(*) AS count
+       FROM expenses
+       WHERE date_time >= ? AND date_time <= ?
+       GROUP BY category
+       ORDER BY total DESC;`,
+      [startDate, endDate || new Date().toISOString()]
+    );
+    return rows || [];
+  } catch (error) {
+    console.error('[SQLite] Error getting category breakdown:', error);
+    return [];
+  }
+};
+
+/**
+ * Get total spending for a date range.
+ */
+export const getTotalSpending = async (startDate, endDate) => {
+  try {
+    const db = await getDb();
+    const result = await db.getFirstAsync(
+      `SELECT COALESCE(SUM(expense), 0) AS total, COUNT(*) AS count
+       FROM expenses
+       WHERE date_time >= ? AND date_time <= ?;`,
+      [startDate, endDate || new Date().toISOString()]
+    );
+    return {
+      total: result?.total ?? 0,
+      count: result?.count ?? 0,
+    };
+  } catch (error) {
+    return { total: 0, count: 0 };
+  }
+};
+
+/**
+ * Get largest expense in a period.
+ */
+export const getLargestExpense = async (startDate, endDate) => {
+  try {
+    const db = await getDb();
+    const row = await db.getFirstAsync(
+      `SELECT * FROM expenses
+       WHERE date_time >= ? AND date_time <= ?
+       ORDER BY expense DESC LIMIT 1;`,
+      [startDate, endDate || new Date().toISOString()]
+    );
+    return row || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Get recent unique merchants for suggestions.
+ */
+export const getRecentMerchants = async (limit = 10) => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(
+      `SELECT merchant, category, COUNT(*) AS freq
+       FROM expenses
+       WHERE merchant IS NOT NULL AND merchant != ''
+       GROUP BY merchant
+       ORDER BY MAX(date_time) DESC
+       LIMIT ?;`,
+      [limit]
+    );
+    return rows || [];
+  } catch (error) {
+    return [];
+  }
+};
+
+/**
+ * Get expenses aggregated by timeframe for legacy chart compat.
  */
 export const getExpensesByTimeframe = async (timeframe = 'week') => {
   try {
@@ -191,20 +549,17 @@ export const getExpensesByTimeframe = async (timeframe = 'week') => {
       startDate = new Date(now);
       startDate.setDate(now.getDate() - 29);
     } else {
-      // year
       startDate = new Date(now);
       startDate.setDate(now.getDate() - 364);
     }
 
     const startIso = startDate.toISOString();
 
-    // Raw expense list for history view
     const expenses = await db.getAllAsync(
       `SELECT * FROM expenses WHERE date_time >= ? ORDER BY date_time DESC;`,
       [startIso]
     );
 
-    // Aggregate daily totals for the chart
     const aggregated = await db.getAllAsync(
       `SELECT substr(date_time, 1, 10) AS day, SUM(expense) AS total
        FROM expenses
@@ -214,7 +569,6 @@ export const getExpensesByTimeframe = async (timeframe = 'week') => {
       [startIso]
     );
 
-    // Build a dense day-by-day array (fill gaps with 0)
     const chartMap = {};
     (aggregated || []).forEach((row) => {
       chartMap[row.day] = row.total;
@@ -250,9 +604,8 @@ export const getExpensesByTimeframe = async (timeframe = 'week') => {
   }
 };
 
-/**
- * Custom Categories CRUD
- */
+// ─── Custom Categories CRUD ──────────────────────────────────────
+
 export const getCustomCategories = async () => {
   try {
     const db = await getDb();
@@ -263,12 +616,12 @@ export const getCustomCategories = async () => {
   }
 };
 
-export const addCustomCategory = async (name, icon = '🏷️', color = '#3B82F6') => {
+export const addCustomCategory = async (name, icon = '🏷️', color = '#818CF8') => {
   try {
     const db = await getDb();
     const safeName = toSqlParam(name, '').trim();
     const safeIcon = toSqlParam(icon, '🏷️');
-    const safeColor = toSqlParam(color, '#3B82F6');
+    const safeColor = toSqlParam(color, '#818CF8');
 
     if (!safeName) return;
 
@@ -279,5 +632,75 @@ export const addCustomCategory = async (name, icon = '🏷️', color = '#3B82F6
     console.log(`[SQLite] Custom category saved: ${safeName}`);
   } catch (error) {
     console.error('[SQLite] Error adding custom category:', error);
+  }
+};
+
+// ─── Budgets ──────────────────────────────────────────────────────
+
+export const getBudgets = async () => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(`SELECT * FROM budgets;`);
+    return rows || [];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const setBudget = async (monthlyLimit, category = null) => {
+  try {
+    const db = await getDb();
+    const isOverall = category ? 0 : 1;
+    const safeCategory = category || 'overall';
+
+    // Upsert: delete old, insert new
+    if (isOverall) {
+      await db.runAsync(`DELETE FROM budgets WHERE is_overall = 1;`);
+    } else {
+      await db.runAsync(`DELETE FROM budgets WHERE category = ? AND is_overall = 0;`, [safeCategory]);
+    }
+
+    await db.runAsync(
+      `INSERT INTO budgets (category, monthly_limit, is_overall) VALUES (?, ?, ?);`,
+      [safeCategory, Number(monthlyLimit) || 0, isOverall]
+    );
+  } catch (error) {
+    console.error('[SQLite] Error setting budget:', error);
+  }
+};
+
+// ─── Settings ─────────────────────────────────────────────────────
+
+export const getSetting = async (key) => {
+  try {
+    const db = await getDb();
+    const row = await db.getFirstAsync(`SELECT value FROM settings WHERE key = ?;`, [key]);
+    return row?.value ?? null;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const setSetting = async (key, value) => {
+  try {
+    const db = await getDb();
+    await db.runAsync(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?);`,
+      [String(key), String(value)]
+    );
+  } catch (error) {
+    console.error('[SQLite] Error saving setting:', error);
+  }
+};
+
+// ─── Export ───────────────────────────────────────────────────────
+
+export const exportAllExpenses = async () => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(`SELECT * FROM expenses ORDER BY date_time DESC;`);
+    return rows || [];
+  } catch (error) {
+    return [];
   }
 };

@@ -604,3 +604,10 @@
 {"_e":"metro:client_log","_t":1787653287268,"level":"log","data":["[SyncService] Network reconnected. Triggering auto-sync..."]}
 {"_e":"metro:client_log","_t":1787653287269,"level":"log","data":["[DeepLink] Received URL:","exp://192.168.1.50:8081","{\"hostname\": \"192.168.1.50\", \"path\": null, \"queryParams\": {}, \"scheme\": \"exp\"}"]}
 {"_e":"metro:client_log","_t":1787653287320,"level":"log","data":["[SQLite] Database initialized successfully"]}
+{"_e":"root:init","_t":1787839972475,"format":"v0-jsonl","version":"57.0.18"}
+{"_e":"env:mode","_t":1787839972493,"nodeEnv":"production","babelEnv":"production","mode":"production"}
+{"_e":"env:load","_t":1787839972530,"mode":"production","files":[],"env":{}}
+{"_e":"devserver:start","_t":1787839983054,"mode":"production","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1787839997918,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1787840005423,"plugins":[{"packageName":"expo-sqlite","bannerTitle":"expo-sqlite","cliBanner":false,"webpageEndpoint":"/_expo/plugins/expo-sqlite"}]}
+{"_e":"metro:instantiate","_t":1787840023089,"atlas":false,"workers":8,"host":"::","port":8081}

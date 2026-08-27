@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { COLORS, SPACING, RADIUS } from '../constants/theme';
 
 const BUTTONS = [
   ['1', '2', '3'],
@@ -11,9 +12,7 @@ const BUTTONS = [
 
 export default function Numpad({ value, onChange }) {
   const handlePress = (key) => {
-    // Medium haptic tap on numpad press
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     const currentValue = value || '';
 
     if (key === '⌫') {
@@ -37,8 +36,10 @@ export default function Numpad({ value, onChange }) {
       if (parts[1] && parts[1].length >= 2) return;
     }
 
-    // Max amount safety check
-    if (currentValue.length >= 8 && key !== '⌫') return;
+    // Max amount safety (8 digits before decimal)
+    const intPart = currentValue.split('.')[0] || '';
+    if (key !== '.' && !currentValue.includes('.') && intPart.length >= 7) return;
+    if (key !== '.' && currentValue.includes('.') && intPart.length >= 7) return;
 
     onChange(currentValue + key);
   };
@@ -50,7 +51,7 @@ export default function Numpad({ value, onChange }) {
           {row.map((key) => (
             <TouchableOpacity
               key={key}
-              activeOpacity={0.6}
+              activeOpacity={0.5}
               style={[
                 styles.button,
                 key === '⌫' && styles.deleteButton,
@@ -76,35 +77,35 @@ export default function Numpad({ value, onChange }) {
 const styles = StyleSheet.create({
   grid: {
     width: '100%',
-    paddingHorizontal: 16,
-    marginVertical: 12,
+    paddingHorizontal: SPACING.md,
+    marginVertical: SPACING.sm,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   button: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.bgSurface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   deleteButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: COLORS.errorBg,
+    borderColor: COLORS.errorBorder,
   },
   keyText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
+    color: COLORS.textPrimary,
+    fontSize: 22,
+    fontWeight: '600',
   },
   deleteKeyText: {
-    color: '#F87171',
-    fontSize: 22,
+    color: COLORS.error,
+    fontSize: 20,
   },
 });

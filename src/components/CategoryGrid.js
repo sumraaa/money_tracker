@@ -9,14 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-
-const DEFAULT_CATEGORIES = [
-  { id: 'fast-food', name: 'Fast Food & Swiggy', icon: '🍔', color: '#EF4444' },
-  { id: 'gym', name: 'Gym & Supplements', icon: '🏋️', color: '#10B981' },
-  { id: 'subscriptions', name: 'Subscriptions', icon: '🎵', color: '#A855F7' },
-  { id: 'education', name: 'Education & Courses', icon: '🎓', color: '#3B82F6' },
-  { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
-];
+import { COLORS, SPACING, RADIUS, DEFAULT_CATEGORIES } from '../constants/theme';
 
 export default function CategoryGrid({
   selectedCategory,
@@ -27,7 +20,6 @@ export default function CategoryGrid({
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customIcon, setCustomIcon] = useState('🏷️');
-  const [isFocused, setIsFocused] = useState(false);
 
   const safeCustomCategories = Array.isArray(customCategories) ? customCategories : [];
 
@@ -39,7 +31,7 @@ export default function CategoryGrid({
         id: String(c.name).toLowerCase().replace(/\s+/g, '-'),
         name: String(c.name).trim(),
         icon: String(c.icon || '🏷️'),
-        color: String(c.color || '#3B82F6'),
+        color: String(c.color || COLORS.accent),
       })),
   ];
 
@@ -86,37 +78,28 @@ export default function CategoryGrid({
           return (
             <TouchableOpacity
               key={item.id}
-              activeOpacity={0.75}
-              style={[
-                styles.chip,
-                isSelected && styles.chipSelected,
-              ]}
+              activeOpacity={0.7}
+              style={[styles.chip, isSelected && styles.chipSelected]}
               onPress={() => handleSelect(item)}
             >
               <Text style={styles.chipIcon}>{item.icon}</Text>
-              <Text
-                style={[
-                  styles.chipText,
-                  isSelected && styles.chipTextSelected,
-                ]}
-              >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {item.name}
               </Text>
             </TouchableOpacity>
           );
         })}
 
-        {/* Add Custom Category Chip */}
         <TouchableOpacity
-          activeOpacity={0.75}
+          activeOpacity={0.7}
           style={[styles.chip, styles.addCustomChip]}
           onPress={() => {
             Haptics.selectionAsync();
             setShowCustomModal(true);
           }}
         >
-          <Text style={styles.chipIcon}>➕</Text>
-          <Text style={[styles.chipText, { color: '#60A5FA' }]}>Custom</Text>
+          <Text style={styles.chipIcon}>+</Text>
+          <Text style={[styles.chipText, { color: COLORS.accent }]}>Custom</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -129,47 +112,34 @@ export default function CategoryGrid({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.customModalContent}>
-            <Text style={styles.customModalTitle}>New Custom Category</Text>
+            <Text style={styles.customModalTitle}>New Category</Text>
             <TextInput
-              style={[
-                styles.customInput,
-                isFocused && styles.customInputFocused,
-              ]}
+              style={styles.customInput}
               placeholder="e.g. Coffee, Pet Care"
-              placeholderTextColor="#71717A"
+              placeholderTextColor={COLORS.textMuted}
               value={customName}
               onChangeText={setCustomName}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
               autoFocus
             />
-
             <View style={styles.iconSelector}>
               {['🏷️', '🛒', '☕', '🍿', '💻', '🚕', '🏥', '⚡'].map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
                   activeOpacity={0.7}
-                  style={[
-                    styles.emojiBtn,
-                    customIcon === emoji && styles.emojiBtnSelected,
-                  ]}
+                  style={[styles.emojiBtn, customIcon === emoji && styles.emojiBtnSelected]}
                   onPress={() => {
                     Haptics.selectionAsync();
                     setCustomIcon(emoji);
                   }}
                 >
-                  <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                  <Text style={{ fontSize: 20 }}>{emoji}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setShowCustomModal(false);
-                }}
+                onPress={() => setShowCustomModal(false)}
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -178,7 +148,7 @@ export default function CategoryGrid({
                 style={styles.saveBtn}
                 onPress={handleSaveCustom}
               >
-                <Text style={styles.saveText}>Add Category</Text>
+                <Text style={styles.saveText}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -190,131 +160,120 @@ export default function CategoryGrid({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    marginVertical: SPACING.sm,
   },
   sectionTitle: {
-    color: '#71717A',
-    fontSize: 11,
+    color: COLORS.textMuted,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    paddingHorizontal: 4,
+    letterSpacing: 1.2,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
   },
   scrollContent: {
-    gap: 10,
-    paddingRight: 16,
+    gap: SPACING.sm,
+    paddingRight: SPACING.lg,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLORS.bgSurface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   chipSelected: {
-    backgroundColor: 'rgba(59, 130, 246, 0.18)',
-    borderColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
+    backgroundColor: COLORS.accentMuted,
+    borderColor: COLORS.accent,
   },
   addCustomChip: {
     borderStyle: 'dashed',
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-    backgroundColor: 'rgba(59, 130, 246, 0.06)',
+    borderColor: COLORS.borderAccent,
+    backgroundColor: COLORS.accentBg,
   },
   chipIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    fontSize: 14,
+    marginRight: 6,
   },
   chipText: {
-    color: '#A0A0AB',
-    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontSize: 12,
     fontWeight: '600',
   },
   chipTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.88)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: SPACING.xxl,
   },
   customModalContent: {
     width: '100%',
-    backgroundColor: '#09090B',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xxl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: COLORS.borderStrong,
   },
   customModalTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 16,
+    color: COLORS.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: SPACING.lg,
   },
   customInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    color: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 16,
-  },
-  customInputFocused: {
-    borderColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    backgroundColor: COLORS.bgSurface,
+    color: COLORS.textPrimary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 13,
+    fontSize: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.lg,
   },
   iconSelector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: SPACING.xl,
   },
   emojiBtn: {
-    padding: 10,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.bgSurface,
   },
   emojiBtnSelected: {
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: COLORS.accentMuted,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: COLORS.accent,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: SPACING.md,
   },
   cancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
   cancelText: {
-    color: '#71717A',
+    color: COLORS.textMuted,
     fontWeight: '600',
   },
   saveBtn: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 100,
+    backgroundColor: COLORS.accentStrong,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+    borderRadius: RADIUS.pill,
   },
   saveText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
 });
