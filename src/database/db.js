@@ -94,6 +94,28 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 4,
+    description: 'Add recurring_expenses table',
+    up: async (db) => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS recurring_expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          merchant TEXT NOT NULL,
+          amount REAL NOT NULL,
+          category TEXT NOT NULL DEFAULT 'Subscriptions',
+          frequency TEXT NOT NULL DEFAULT 'monthly',
+          next_date TEXT,
+          is_subscription INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          payment_method TEXT DEFAULT 'UPI',
+          note TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME
+        );
+      `);
+    },
+  },
 ];
 
 async function getColumnNames(db, tableName) {
@@ -604,6 +626,49 @@ export const getExpensesByTimeframe = async (timeframe = 'week') => {
   }
 };
 
+/**
+ * Get spending aggregated by merchant.
+ */
+export const getMerchantBreakdown = async (startDate, limit = 10) => {
+  try {
+    const db = await getDb();
+    const startIso = startDate || new Date(0).toISOString();
+    const rows = await db.getAllAsync(
+      `SELECT merchant, category, SUM(expense) AS total, COUNT(*) AS count, AVG(expense) AS avg_expense
+       FROM expenses
+       WHERE merchant IS NOT NULL AND merchant != '' AND date_time >= ?
+       GROUP BY merchant
+       ORDER BY total DESC
+       LIMIT ?;`,
+      [startIso, limit]
+    );
+    return rows || [];
+  } catch (error) {
+    return [];
+  }
+};
+
+/**
+ * Get spending aggregated by payment method.
+ */
+export const getPaymentMethodBreakdown = async (startDate) => {
+  try {
+    const db = await getDb();
+    const startIso = startDate || new Date(0).toISOString();
+    const rows = await db.getAllAsync(
+      `SELECT COALESCE(payment_method, 'UPI') AS method, SUM(expense) AS total, COUNT(*) AS count
+       FROM expenses
+       WHERE date_time >= ?
+       GROUP BY method
+       ORDER BY total DESC;`,
+      [startIso]
+    );
+    return rows || [];
+  } catch (error) {
+    return [];
+  }
+};
+
 // ─── Custom Categories CRUD ──────────────────────────────────────
 
 export const getCustomCategories = async () => {
@@ -704,3 +769,99 @@ export const exportAllExpenses = async () => {
     return [];
   }
 };
+
+// ─── Recurring Expenses ───────────────────────────────────────────
+
+export const getRecurringExpenses = async () => {
+  try {
+    const db = await getDb();
+    const rows = await db.getAllAsync(`SELECT * FROM recurring_expenses ORDER BY next_date ASC;`);
+    return rows || [];
+  } catch (error) {
+    console.error('[SQLite] Error fetching recurring expenses:', error);
+    return [];
+  }
+};
+
+export const addRecurringExpense = async (params = {}) => {
+  try {
+    const db = await getDb();
+    const safeMerchant = toSqlParam(params.merchant, '').trim();
+    const safeAmount = parseFloat(params.amount) || 0;
+    const safeCategory = toSqlParam(params.category, 'Subscriptions');
+    const safeFrequency = toSqlParam(params.frequency, 'monthly');
+    const safeNextDate = toSqlParam(params.next_date, '');
+    const safeIsSub = params.is_subscription ? 1 : 0;
+    const safePayment = toSqlParam(params.payment_method, 'UPI');
+    const safeNote = toSqlParam(params.note, '');
+    const now = new Date().toISOString();
+
+    if (!safeMerchant || safeAmount <= 0) throw new Error('Invalid recurring expense');
+
+    const result = await db.runAsync(
+      `INSERT INTO recurring_expenses (merchant, amount, category, frequency, next_date, is_subscription, is_active, payment_method, note, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?);`,
+      [safeMerchant, safeAmount, safeCategory, safeFrequency, safeNextDate, safeIsSub, safePayment, safeNote, now, now]
+    );
+    return { id: result.lastInsertRowId, merchant: safeMerchant, amount: safeAmount };
+  } catch (error) {
+    console.error('[SQLite] Error adding recurring expense:', error);
+    throw error;
+  }
+};
+
+export const updateRecurringExpense = async (id, params = {}) => {
+  try {
+    const db = await getDb();
+    const safeId = Number(id);
+    if (isNaN(safeId) || safeId <= 0) return;
+
+    const fields = [];
+    const values = [];
+
+    if (params.merchant !== undefined) { fields.push('merchant = ?'); values.push(toSqlParam(params.merchant, '')); }
+    if (params.amount !== undefined) { fields.push('amount = ?'); values.push(parseFloat(params.amount) || 0); }
+    if (params.category !== undefined) { fields.push('category = ?'); values.push(toSqlParam(params.category, 'Subscriptions')); }
+    if (params.frequency !== undefined) { fields.push('frequency = ?'); values.push(toSqlParam(params.frequency, 'monthly')); }
+    if (params.next_date !== undefined) { fields.push('next_date = ?'); values.push(toSqlParam(params.next_date, '')); }
+    if (params.is_subscription !== undefined) { fields.push('is_subscription = ?'); values.push(params.is_subscription ? 1 : 0); }
+    if (params.is_active !== undefined) { fields.push('is_active = ?'); values.push(params.is_active ? 1 : 0); }
+    if (params.payment_method !== undefined) { fields.push('payment_method = ?'); values.push(toSqlParam(params.payment_method, 'UPI')); }
+    if (params.note !== undefined) { fields.push('note = ?'); values.push(toSqlParam(params.note, '')); }
+
+    if (fields.length === 0) return;
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(safeId);
+
+    await db.runAsync(`UPDATE recurring_expenses SET ${fields.join(', ')} WHERE id = ?;`, values);
+  } catch (error) {
+    console.error('[SQLite] Error updating recurring expense:', error);
+  }
+};
+
+export const deleteRecurringExpense = async (id) => {
+  try {
+    const db = await getDb();
+    const safeId = Number(id);
+    if (isNaN(safeId) || safeId <= 0) return;
+    await db.runAsync(`DELETE FROM recurring_expenses WHERE id = ?;`, [safeId]);
+  } catch (error) {
+    console.error('[SQLite] Error deleting recurring expense:', error);
+  }
+};
+
+export const toggleRecurringExpense = async (id) => {
+  try {
+    const db = await getDb();
+    const safeId = Number(id);
+    if (isNaN(safeId) || safeId <= 0) return;
+    await db.runAsync(
+      `UPDATE recurring_expenses SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?;`,
+      [new Date().toISOString(), safeId]
+    );
+  } catch (error) {
+    console.error('[SQLite] Error toggling recurring expense:', error);
+  }
+};
+

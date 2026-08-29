@@ -2,6 +2,9 @@
  * ZERO FRICTION — Design System
  * Premium Dark Fintech Aesthetic
  * All visual tokens centralized here. No scattered arbitrary values.
+ *
+ * TYPOGRAPHY: Sized for real phone readability, not desktop previews.
+ * COLORS: Layered near-black with restrained accent usage.
  */
 
 export const COLORS = {
@@ -11,42 +14,47 @@ export const COLORS = {
   bgSurface: '#18181B',
   bgSubtle: '#1C1C1F',
   bgHover: '#27272A',
+  bgInput: '#141416',
 
   // Borders
   border: 'rgba(255,255,255,0.06)',
   borderSubtle: 'rgba(255,255,255,0.04)',
   borderStrong: 'rgba(255,255,255,0.10)',
-  borderAccent: 'rgba(99,102,241,0.25)',
+  borderAccent: 'rgba(129,140,248,0.18)',
 
   // Text
   textPrimary: '#FAFAFA',
   textSecondary: '#A1A1AA',
   textMuted: '#71717A',
   textDisabled: '#3F3F46',
+  textInverse: '#09090B',
 
   // Accent (restrained indigo-violet)
   accent: '#818CF8',
-  accentMuted: 'rgba(129,140,248,0.15)',
+  accentMuted: 'rgba(129,140,248,0.12)',
   accentStrong: '#6366F1',
-  accentBg: 'rgba(99,102,241,0.08)',
+  accentBg: 'rgba(99,102,241,0.06)',
 
   // Semantic
   success: '#34D399',
-  successBg: 'rgba(52,211,153,0.10)',
-  successBorder: 'rgba(52,211,153,0.25)',
+  successMuted: '#059669',
+  successBg: 'rgba(52,211,153,0.08)',
+  successBorder: 'rgba(52,211,153,0.20)',
 
   warning: '#FBBF24',
-  warningBg: 'rgba(251,191,36,0.10)',
-  warningBorder: 'rgba(251,191,36,0.25)',
+  warningMuted: '#D97706',
+  warningBg: 'rgba(251,191,36,0.08)',
+  warningBorder: 'rgba(251,191,36,0.20)',
 
   error: '#F87171',
-  errorBg: 'rgba(248,113,113,0.10)',
-  errorBorder: 'rgba(248,113,113,0.25)',
+  errorMuted: '#DC2626',
+  errorBg: 'rgba(248,113,113,0.08)',
+  errorBorder: 'rgba(248,113,113,0.20)',
 
   info: '#60A5FA',
-  infoBg: 'rgba(96,165,250,0.10)',
+  infoBg: 'rgba(96,165,250,0.08)',
 
-  // Chart palette
+  // Chart palette (harmonious)
   chart: ['#818CF8', '#34D399', '#FBBF24', '#F87171', '#60A5FA', '#C084FC', '#FB923C'],
 };
 
@@ -58,6 +66,7 @@ export const SPACING = {
   xl: 20,
   xxl: 24,
   xxxl: 32,
+  xxxxl: 40,
 };
 
 export const RADIUS = {
@@ -66,36 +75,48 @@ export const RADIUS = {
   md: 12,
   lg: 16,
   xl: 20,
+  xxl: 24,
   pill: 100,
 };
 
+/**
+ * TYPOGRAPHY HIERARCHY
+ * Designed for real-world phone distance reading.
+ * Primary financial numbers: 34-40pt
+ * Section titles: 16-18pt
+ * Body/transaction text: 15-16pt
+ * Meta/labels: 12-13pt
+ * Overlines: 11pt
+ */
 export const TYPOGRAPHY = {
-  // Display
-  displayLg: { fontSize: 36, fontWeight: '800', letterSpacing: -0.5 },
-  displayMd: { fontSize: 28, fontWeight: '800', letterSpacing: -0.3 },
-  displaySm: { fontSize: 22, fontWeight: '700', letterSpacing: -0.2 },
+  // Display (hero financial numbers)
+  displayLg: { fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  displayMd: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  displaySm: { fontSize: 24, fontWeight: '700', letterSpacing: -0.3 },
 
   // Headings
-  h1: { fontSize: 20, fontWeight: '700' },
-  h2: { fontSize: 17, fontWeight: '700' },
-  h3: { fontSize: 15, fontWeight: '600' },
+  h1: { fontSize: 22, fontWeight: '700', lineHeight: 28 },
+  h2: { fontSize: 18, fontWeight: '700', lineHeight: 24 },
+  h3: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
 
   // Body
-  bodyLg: { fontSize: 15, fontWeight: '400', lineHeight: 22 },
-  body: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
-  bodySm: { fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  bodyLg: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
+  body: { fontSize: 15, fontWeight: '400', lineHeight: 22 },
+  bodySm: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
 
   // Labels
-  label: { fontSize: 13, fontWeight: '600' },
-  labelSm: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
-  labelXs: { fontSize: 10, fontWeight: '600', letterSpacing: 0.8 },
+  label: { fontSize: 14, fontWeight: '600' },
+  labelSm: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
+  labelXs: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5 },
 
-  // Overline
-  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  // Overline (section headers)
+  overline: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
 
-  // Mono (numbers)
-  mono: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  // Mono (financial numbers)
+  monoXl: { fontSize: 22, fontWeight: '700', fontVariant: ['tabular-nums'] },
   monoLg: { fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  mono: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  monoSm: { fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
 };
 
 export const ELEVATION = {
@@ -131,7 +152,12 @@ export const ANIMATION = {
   springBouncy: { friction: 6, tension: 80 },
 };
 
-// Category system
+// Minimum touch target (48px per Android guidelines)
+export const TOUCH = {
+  minTarget: 48,
+};
+
+// ─── Category System ─────────────────────────────────────────────
 export const DEFAULT_CATEGORIES = [
   { id: 'food', name: 'Food', icon: '🍔', color: '#F87171' },
   { id: 'transport', name: 'Transport', icon: '🚗', color: '#FBBF24' },

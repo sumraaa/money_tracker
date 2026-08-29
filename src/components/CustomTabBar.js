@@ -1,14 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Animated,
-} from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 import { Home, BarChart2, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, SPACING, RADIUS, ANIMATION } from '../constants/theme';
+import { COLORS, SPACING, RADIUS, ANIMATION, TYPOGRAPHY } from '../constants/theme';
 
 const TABS = [
   { id: 'home', label: 'Log', Icon: Home },
@@ -22,7 +16,7 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
   useEffect(() => {
     TABS.forEach((tab, idx) => {
       Animated.spring(scales[idx], {
-        toValue: tab.id === activeTab ? 1.08 : 1,
+        toValue: tab.id === activeTab ? 1.05 : 1,
         useNativeDriver: true,
         friction: ANIMATION.spring.friction,
         tension: ANIMATION.spring.tension,
@@ -64,7 +58,6 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                 {tab.label}
               </Text>
-              {isActive && <View style={styles.activeDot} />}
             </TouchableOpacity>
           );
         })}
@@ -96,35 +89,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xs,
-    position: 'relative',
   },
   iconWrap: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36,
+    alignItems: 'center', justifyContent: 'center',
     borderRadius: RADIUS.md,
   },
   iconWrapActive: {
     backgroundColor: COLORS.accentMuted,
   },
   tabLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    ...TYPOGRAPHY.labelXs,
     marginTop: 3,
     color: COLORS.textMuted,
   },
   tabLabelActive: {
     color: COLORS.accent,
     fontWeight: '700',
-  },
-  activeDot: {
-    position: 'absolute',
-    bottom: -2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.accent,
   },
 });

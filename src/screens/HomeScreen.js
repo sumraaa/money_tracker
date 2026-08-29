@@ -1,17 +1,31 @@
+/**
+ * ZERO FRICTION — Home Screen (Log)
+ * Primary question: "How much am I spending right now?"
+ *
+ * Information hierarchy:
+ * 1. Greeting + date + sync state
+ * 2. Today's spend (hero metric)
+ * 3. Supporting metrics (month, daily avg, safe-to-spend)
+ * 4. Quick Log CTA
+ * 5. Recent activity
+ *
+ * Feels: FAST
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Modal, TextInput, StatusBar, FlatList, Alert,
-  RefreshControl,
+  StatusBar, FlatList, Alert, RefreshControl,
 } from 'react-native';
-import { Settings, Plus, ChevronRight, RefreshCw } from 'lucide-react-native';
+import { Settings, Plus, ChevronRight, RefreshCw, TrendingDown, TrendingUp, Shield } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { getAllExpenses, deleteExpense } from '../database/db';
-import { triggerSync, setScriptUrl, getScriptUrl } from '../services/SyncService';
-import { getTodaySpend, getMonthSpend, getMonthlyDailyAverage, getBudgetStatus } from '../services/AnalyticsService';
+import { triggerSync } from '../services/SyncService';
+import { getTodaySpend, getMonthSpend, getMonthlyDailyAverage, getBudgetStatus, getSafeToSpendToday, getSpendingScore, getWeekSpend, getLastWeekSpend } from '../services/AnalyticsService';
+import { on, EventTypes } from '../services/EventBus';
 import QuickLogModal from '../components/QuickLogModal';
-import { COLORS, SPACING, RADIUS, DEFAULT_CATEGORIES } from '../constants/theme';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY, DEFAULT_CATEGORIES } from '../constants/theme';
 import { formatINR } from '../utils/money';
 import { formatShortDate, formatTime, relativeLabel } from '../utils/dates';
 
@@ -30,31 +44,49 @@ function getCategoryIcon(categoryName) {
   return cat?.icon || '💳';
 }
 
-export default function HomeScreen({ syncStatus, onExpenseAdded }) {
+function getCategoryColor(categoryName) {
+  if (!categoryName) return COLORS.textMuted;
+  const cat = DEFAULT_CATEGORIES.find(
+    (c) => c.name.toLowerCase() === categoryName.toLowerCase()
+  );
+  return cat?.color || COLORS.textMuted;
+}
+
+export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [expenses, setExpenses] = useState([]);
-  const [settingsVisible, setSettingsVisible] = useState(false);
-  const [tempUrl, setTempUrl] = useState(getScriptUrl());
   const [todayTotal, setTodayTotal] = useState(0);
   const [monthTotal, setMonthTotal] = useState(0);
   const [dailyAvg, setDailyAvg] = useState(0);
   const [budget, setBudget] = useState({ hasOverallBudget: false });
+  const [safeToSpend, setSafeToSpend] = useState(null);
+  const [spendingScore, setSpendingScore] = useState(null);
+  const [weekData, setWeekData] = useState({ total: 0 });
+  const [lastWeekData, setLastWeekData] = useState({ total: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [exps, today, month, avg, budgetData] = await Promise.all([
-        getAllExpenses({ limit: 20, sortBy: 'date_time', sortOrder: 'DESC' }),
+      const [exps, today, month, avg, budgetData, safe, score, week, lastWeek] = await Promise.all([
+        getAllExpenses({ limit: 15, sortBy: 'date_time', sortOrder: 'DESC' }),
         getTodaySpend().catch(() => ({ total: 0 })),
         getMonthSpend().catch(() => ({ total: 0 })),
         getMonthlyDailyAverage().catch(() => 0),
         getBudgetStatus().catch(() => ({ hasOverallBudget: false })),
+        getSafeToSpendToday().catch(() => null),
+        getSpendingScore().catch(() => null),
+        getWeekSpend().catch(() => ({ total: 0 })),
+        getLastWeekSpend().catch(() => ({ total: 0 })),
       ]);
       setExpenses(exps);
       setTodayTotal(today.total);
       setMonthTotal(month.total);
       setDailyAvg(avg);
       setBudget(budgetData);
+      setSafeToSpend(safe);
+      setSpendingScore(score);
+      setWeekData(week);
+      setLastWeekData(lastWeek);
     } catch (e) {
       console.error('[Home] load error:', e);
     }
@@ -63,6 +95,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
   useEffect(() => {
     loadData();
 
+    // Deep link handling
     const handleDeepLink = (event) => {
       const data = Linking.parse(event.url);
       if (
@@ -77,7 +110,22 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
 
     Linking.getInitialURL().then((url) => { if (url) handleDeepLink({ url }); });
     const subscription = Linking.addEventListener('url', handleDeepLink);
-    return () => subscription.remove();
+
+    // Listen for global events
+    const unsub1 = on(EventTypes.BUDGET_CHANGED, loadData);
+    const unsub2 = on(EventTypes.EXPENSE_DELETED, loadData);
+    const unsub3 = on(EventTypes.SYNC_COMPLETED, loadData);
+    const unsub4 = on(EventTypes.EXPENSE_CREATED, loadData);
+    const unsub5 = on(EventTypes.EXPENSE_UPDATED, loadData);
+
+    return () => {
+      subscription.remove();
+      unsub1();
+      unsub2();
+      unsub3();
+      unsub4();
+      unsub5();
+    };
   }, []);
 
   const handleRefresh = async () => {
@@ -108,12 +156,6 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
     );
   };
 
-  const handleSaveSettings = () => {
-    setScriptUrl(tempUrl);
-    setSettingsVisible(false);
-    triggerSync();
-  };
-
   const unsyncedCount = expenses.filter((e) => e.sync_status === 0).length;
 
   const dateStr = new Date().toLocaleDateString('en-IN', {
@@ -121,6 +163,11 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
     day: 'numeric',
     month: 'long',
   });
+
+  // Week-over-week change
+  const weekChange = lastWeekData.total > 0
+    ? ((weekData.total - lastWeekData.total) / lastWeekData.total) * 100
+    : null;
 
   const renderExpenseItem = ({ item }) => {
     const icon = getCategoryIcon(item.category);
@@ -131,18 +178,18 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
     return (
       <TouchableOpacity
         style={styles.txRow}
-        activeOpacity={0.7}
+        activeOpacity={0.6}
         onLongPress={() => handleDelete(item.id, label, item.expense)}
       >
-        <View style={styles.txIconWrap}>
+        <View style={[styles.txIconWrap, { backgroundColor: getCategoryColor(item.category) + '14' }]}>
           <Text style={styles.txIcon}>{icon}</Text>
         </View>
         <View style={styles.txDetails}>
           <Text style={styles.txLabel} numberOfLines={1}>{label}</Text>
-          {subtitle ? (
-            <Text style={styles.txSub} numberOfLines={1}>{subtitle}</Text>
-          ) : null}
           <View style={styles.txMeta}>
+            {subtitle ? (
+              <Text style={styles.txSub} numberOfLines={1}>{subtitle} · </Text>
+            ) : null}
             <Text style={styles.txDate}>
               {formatShortDate(item.date_time)} · {formatTime(item.date_time)}
             </Text>
@@ -168,7 +215,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
           {/* Sync indicator */}
           {syncStatus?.isSyncing ? (
             <View style={styles.syncIndicator}>
-              <RefreshCw size={12} color={COLORS.accent} />
+              <RefreshCw size={13} color={COLORS.accent} />
             </View>
           ) : unsyncedCount > 0 ? (
             <TouchableOpacity style={styles.syncBadge} onPress={handleRefresh}>
@@ -178,17 +225,17 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.settingsBtn}
-            onPress={() => setSettingsVisible(true)}
+            onPress={onOpenSettings}
           >
             <Settings size={18} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Primary Metric: Today's spending */}
-      <View style={styles.primaryCard}>
-        <Text style={styles.primaryLabel}>Spent today</Text>
-        <Text style={styles.primaryAmount}>
+      {/* Today's Spend — Hero */}
+      <View style={styles.heroSection}>
+        <Text style={styles.heroLabel}>Spent today</Text>
+        <Text style={styles.heroAmount}>
           {formatINR(todayTotal, { showPaise: false })}
         </Text>
 
@@ -207,7 +254,21 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
               {formatINR(dailyAvg, { showPaise: false })}
             </Text>
           </View>
-          {budget.hasOverallBudget && (
+          {safeToSpend && (
+            <>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Safe to spend</Text>
+                <Text style={[
+                  styles.metricValue,
+                  safeToSpend.isOverToday && { color: COLORS.warning },
+                ]}>
+                  {formatINR(safeToSpend.amount, { showPaise: false })}
+                </Text>
+              </View>
+            </>
+          )}
+          {!safeToSpend && budget.hasOverallBudget && (
             <>
               <View style={styles.metricDivider} />
               <View style={styles.metricItem}>
@@ -225,7 +286,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
         </View>
       </View>
 
-      {/* Budget progress bar */}
+      {/* Budget progress */}
       {budget.hasOverallBudget && (
         <View style={styles.budgetBar}>
           <View style={styles.budgetBarTrack}>
@@ -244,9 +305,39 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
         </View>
       )}
 
+      {/* Spending Score */}
+      {spendingScore && (
+        <View style={styles.scoreRow}>
+          <View style={styles.scoreCircle}>
+            <Text style={styles.scoreValue}>{spendingScore.score}</Text>
+          </View>
+          <View style={styles.scoreInfo}>
+            <Text style={styles.scoreTitle}>Spending Score</Text>
+            <Text style={styles.scoreLabel}>{spendingScore.label}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Week trend chip */}
+      {weekChange !== null && weekData.total > 0 && (
+        <View style={styles.weekChip}>
+          {weekChange <= 0 ? (
+            <TrendingDown size={14} color={COLORS.success} />
+          ) : (
+            <TrendingUp size={14} color={COLORS.warning} />
+          )}
+          <Text style={[
+            styles.weekChipText,
+            weekChange <= 0 ? { color: COLORS.success } : { color: COLORS.warning },
+          ]}>
+            {weekChange <= 0 ? '↓' : '↑'} {Math.abs(weekChange).toFixed(0)}% vs last week · {formatINR(weekData.total, { showPaise: false })}
+          </Text>
+        </View>
+      )}
+
       {/* Quick Log CTA */}
       <TouchableOpacity
-        activeOpacity={0.8}
+        activeOpacity={0.75}
         style={styles.quickLogBtn}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -315,43 +406,6 @@ export default function HomeScreen({ syncStatus, onExpenseAdded }) {
           if (onExpenseAdded) onExpenseAdded();
         }}
       />
-
-      {/* Settings Modal */}
-      <Modal
-        visible={settingsVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSettingsVisible(false)}
-      >
-        <View style={styles.settingsBackdrop}>
-          <View style={styles.settingsBox}>
-            <Text style={styles.settingsTitle}>Google Sheets Sync</Text>
-            <Text style={styles.settingsDesc}>
-              Paste your deployed Google Apps Script Web App URL to sync expenses.
-            </Text>
-            <TextInput
-              style={styles.urlInput}
-              placeholder="https://script.google.com/macros/s/.../exec"
-              placeholderTextColor={COLORS.textDisabled}
-              value={tempUrl}
-              onChangeText={setTempUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <View style={styles.settingsActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setSettingsVisible(false)}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveSettingsBtn} onPress={handleSaveSettings}>
-                <Text style={styles.saveText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -367,18 +421,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.lg,
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   greeting: {
+    ...TYPOGRAPHY.h1,
     color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
     marginBottom: 2,
   },
   dateText: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.textMuted,
-    fontSize: 13,
-    fontWeight: '400',
   },
   headerRight: {
     flexDirection: 'row',
@@ -386,61 +438,48 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   settingsBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.md,
+    width: 40, height: 40, borderRadius: RADIUS.md,
     backgroundColor: COLORS.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
   },
   syncIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30, height: 30, borderRadius: 15,
     backgroundColor: COLORS.accentBg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
   syncBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: 24, height: 24, borderRadius: 12,
     backgroundColor: COLORS.warningBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    borderColor: COLORS.warningBorder,
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 7,
+    borderWidth: 1, borderColor: COLORS.warningBorder,
   },
   syncBadgeText: {
     color: COLORS.warning,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11, fontWeight: '800',
   },
 
-  // Primary Card
-  primaryCard: {
+  // Hero Section
+  heroSection: {
     marginHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
     backgroundColor: COLORS.bgElevated,
     borderRadius: RADIUS.xl,
-    padding: SPACING.xl,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
   },
-  primaryLabel: {
+  heroLabel: {
+    ...TYPOGRAPHY.labelSm,
     color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '500',
     marginBottom: SPACING.xs,
   },
-  primaryAmount: {
+  heroAmount: {
+    ...TYPOGRAPHY.displayLg,
     color: COLORS.textPrimary,
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
     marginBottom: SPACING.lg,
   },
@@ -457,33 +496,30 @@ const styles = StyleSheet.create({
   },
   metricDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 30,
+    height: 32,
     backgroundColor: COLORS.border,
   },
   metricLabel: {
+    ...TYPOGRAPHY.labelXs,
     color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '500',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   metricValue: {
+    ...TYPOGRAPHY.mono,
     color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
   },
 
   // Budget bar
   budgetBar: {
     marginHorizontal: SPACING.xxl,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   budgetBarTrack: {
-    height: 4,
+    height: 3,
     backgroundColor: COLORS.bgSurface,
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   budgetBarFill: {
     height: '100%',
@@ -491,9 +527,57 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   budgetBarLabel: {
+    ...TYPOGRAPHY.labelXs,
     color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '500',
+  },
+
+  // Spending Score
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    gap: SPACING.md,
+  },
+  scoreCircle: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: COLORS.accentBg,
+    borderWidth: 2, borderColor: COLORS.accent,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  scoreValue: {
+    ...TYPOGRAPHY.monoLg,
+    color: COLORS.accent,
+  },
+  scoreInfo: { flex: 1 },
+  scoreTitle: {
+    ...TYPOGRAPHY.label,
+    color: COLORS.textPrimary,
+  },
+  scoreLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+
+  // Week trend chip
+  weekChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  weekChipText: {
+    ...TYPOGRAPHY.labelSm,
   },
 
   // Quick Log CTA
@@ -510,25 +594,18 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   quickLogIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.md,
+    width: 40, height: 40, borderRadius: RADIUS.md,
     backgroundColor: COLORS.accentStrong,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  quickLogTextWrap: {
-    flex: 1,
-  },
+  quickLogTextWrap: { flex: 1 },
   quickLogTitle: {
+    ...TYPOGRAPHY.label,
     color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
   },
   quickLogSub: {
+    ...TYPOGRAPHY.labelSm,
     color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '400',
     marginTop: 1,
   },
 
@@ -538,17 +615,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.xxl,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
+    ...TYPOGRAPHY.overline,
+    color: COLORS.textMuted,
   },
   sectionCount: {
+    ...TYPOGRAPHY.labelSm,
     color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '500',
   },
 
   // Transaction rows
@@ -560,52 +635,39 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   txIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.bgSurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
+    width: 40, height: 40, borderRadius: RADIUS.md,
+    justifyContent: 'center', alignItems: 'center',
   },
-  txIcon: {
-    fontSize: 16,
-  },
-  txDetails: {
-    flex: 1,
-  },
+  txIcon: { fontSize: 18 },
+  txDetails: { flex: 1 },
   txLabel: {
+    ...TYPOGRAPHY.body,
     color: COLORS.textPrimary,
-    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   txSub: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.textSecondary,
-    fontSize: 12,
-    marginBottom: 2,
   },
   txMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    flexWrap: 'wrap',
   },
   txDate: {
+    ...TYPOGRAPHY.labelSm,
     color: COLORS.textMuted,
-    fontSize: 11,
   },
   syncDotPending: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 5, height: 5, borderRadius: 2.5,
     backgroundColor: COLORS.warning,
+    marginLeft: 6,
   },
   txAmount: {
+    ...TYPOGRAPHY.mono,
     color: COLORS.textPrimary,
-    fontSize: 15,
     fontWeight: '700',
-    fontVariant: ['tabular-nums'],
   },
 
   // Empty state
@@ -615,82 +677,16 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: SPACING.xxxl,
   },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: SPACING.md,
-    opacity: 0.6,
-  },
+  emptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
   emptyTitle: {
+    ...TYPOGRAPHY.h3,
     color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
     marginBottom: SPACING.sm,
   },
   emptySub: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.textMuted,
-    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 19,
-  },
-
-  // Settings Modal
-  settingsBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    padding: SPACING.xxl,
-  },
-  settingsBox: {
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.xxl,
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
-  },
-  settingsTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: SPACING.sm,
-  },
-  settingsDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: SPACING.lg,
-  },
-  urlInput: {
-    backgroundColor: COLORS.bgSurface,
-    color: COLORS.textPrimary,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 13,
-    fontSize: 13,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.xl,
-  },
-  settingsActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: SPACING.md,
-  },
-  cancelBtn: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-  },
-  cancelText: {
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  saveSettingsBtn: {
-    backgroundColor: COLORS.accentStrong,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: RADIUS.pill,
-  },
-  saveText: {
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+    lineHeight: 20,
   },
 });

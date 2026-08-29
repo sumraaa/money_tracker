@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 
 const BUTTONS = [
   ['1', '2', '3'],
@@ -12,7 +12,7 @@ const BUTTONS = [
 
 export default function Numpad({ value, onChange }) {
   const handlePress = (key) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const currentValue = value || '';
 
     if (key === '⌫') {
@@ -36,7 +36,7 @@ export default function Numpad({ value, onChange }) {
       if (parts[1] && parts[1].length >= 2) return;
     }
 
-    // Max amount safety (8 digits before decimal)
+    // Max amount safety (7 digits before decimal)
     const intPart = currentValue.split('.')[0] || '';
     if (key !== '.' && !currentValue.includes('.') && intPart.length >= 7) return;
     if (key !== '.' && currentValue.includes('.') && intPart.length >= 7) return;
@@ -77,18 +77,18 @@ export default function Numpad({ value, onChange }) {
 const styles = StyleSheet.create({
   grid: {
     width: '100%',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
     marginVertical: SPACING.sm,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   button: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 56,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.bgSurface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -101,11 +101,11 @@ const styles = StyleSheet.create({
   },
   keyText: {
     color: COLORS.textPrimary,
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '500',
   },
   deleteKeyText: {
     color: COLORS.error,
-    fontSize: 20,
+    fontSize: 22,
   },
 });
