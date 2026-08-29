@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, StatusBar, BackHandler, ActivityIndicator, Text } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, StatusBar, BackHandler, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { initDatabase } from './src/database/db';
 import { initSyncManager, subscribeSyncState } from './src/services/SyncService';
-import { initNotifications, checkAndTriggerBudgetAlert, checkAndTriggerSubscriptionReminders } from './src/services/NotificationService';
-import { getBudgetStatus } from './src/services/AnalyticsService';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import CustomTabBar from './src/components/CustomTabBar';
 import HomeScreen from './src/screens/HomeScreen';
@@ -12,8 +10,7 @@ import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import RecurringScreen from './src/screens/RecurringScreen';
-import { COLORS, SPACING, TYPOGRAPHY } from './src/constants/theme';
-import { subscribe, EventTypes } from './src/services/EventBus';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from './src/constants/theme';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -26,22 +23,26 @@ export default function App() {
   });
   const [refreshToken, setRefreshToken] = useState(0);
   const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState(null);
+
+  const startDbInit = useCallback(async () => {
+    setDbError(null);
+    setDbReady(false);
+    try {
+      const res = await initDatabase();
+      if (res && res.success === false) {
+        setDbError(res.error || 'Unknown database error');
+      } else {
+        setDbReady(true);
+      }
+    } catch (err) {
+      console.error('[App] Database init caught error:', err);
+      setDbError(err?.message || 'Failed to initialize local database');
+    }
+  }, []);
 
   useEffect(() => {
-    // 1. Initialize SQLite Database gracefully
-    initDatabase()
-      .then(() => {
-        setDbReady(true);
-        // 2. Decouple background service initialization (non-blocking)
-        setTimeout(() => {
-          initNotifications().catch((e) => console.log('[App] Notif init skipped:', e));
-          checkAndTriggerSubscriptionReminders().catch((e) => console.log('[App] Sub reminder check skipped:', e));
-        }, 300);
-      })
-      .catch((err) => {
-        console.error('[App] Database init caught error:', err);
-        setDbReady(true); // Proceed to dashboard safely
-      });
+    startDbInit();
 
     try {
       initSyncManager();
@@ -51,18 +52,6 @@ export default function App() {
 
     const unsubscribeSync = subscribeSyncState((status) => {
       setSyncStatus(status);
-    });
-
-    // Listen for data changes to re-check budget alerts
-    const unsubscribeBus = subscribe(EventTypes.EXPENSE_CREATED, async () => {
-      try {
-        const budgetStatus = await getBudgetStatus().catch(() => null);
-        if (budgetStatus) {
-          checkAndTriggerBudgetAlert(budgetStatus).catch(() => {});
-        }
-      } catch (e) {
-        console.log('[App] Event check notice:', e);
-      }
     });
 
     // Android Hardware Back Button Handling
@@ -86,16 +75,28 @@ export default function App() {
 
     return () => {
       unsubscribeSync();
-      unsubscribeBus();
       backHandler.remove();
     };
-  }, [showRecurring, showSettings, activeTab]);
+  }, [showRecurring, showSettings, activeTab, startDbInit]);
 
   const handleExpenseAdded = () => {
     setRefreshToken((t) => t + 1);
   };
 
   const renderScreen = () => {
+    if (dbError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Database initialization failed</Text>
+          <Text style={styles.errorSub}>{String(dbError)}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={startDbInit} activeOpacity={0.8}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     if (!dbReady) {
       return (
         <View style={styles.loadingContainer}>
@@ -184,5 +185,40 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginTop: SPACING.md,
     letterSpacing: 1,
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: 'center',
+    justify: 'center',
+    padding: SPACING.xxl,
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: SPACING.md,
+  },
+  errorTitle: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.error,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  errorSub: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: SPACING.xxl,
+    lineHeight: 20,
+  },
+  retryBtn: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.lg,
+    borderRadius: RADIUS.pill,
+  },
+  retryText: {
+    ...TYPOGRAPHY.label,
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
 });

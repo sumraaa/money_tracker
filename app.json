@@ -54,15 +54,7 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-status-bar",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#6366F1",
-          "sounds": []
-        }
-      ]
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {

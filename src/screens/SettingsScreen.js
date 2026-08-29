@@ -4,21 +4,21 @@
  * Calm, trustworthy, well-structured.
  */
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal, Alert, Share, Switch, Platform,
+  TextInput, Modal, Alert, Share, Platform,
 } from 'react-native';
 import {
   ArrowLeft, Cloud, Wallet, Download, Upload, Info,
-  ChevronRight, Shield, Bell, Trash2, Database, Repeat,
+  ChevronRight, Shield, Trash2, Database, Repeat,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { setScriptUrl, getScriptUrl, triggerSync } from '../services/SyncService';
-import { getBudgets, setBudget, getSetting, setSetting, exportAllExpenses, getUnsyncedExpenses } from '../database/db';
+import { getBudgets, setBudget, exportAllExpenses, getUnsyncedExpenses } from '../database/db';
 import { getBudgetStatus } from '../services/AnalyticsService';
-import { NOTIF_KEYS, scheduleDailySummaryNotification } from '../services/NotificationService';
 import { formatINR } from '../utils/money';
 import { emit, EventTypes } from '../services/EventBus';
 
@@ -30,46 +30,20 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
   const [currentBudget, setCurrentBudget] = useState(null);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
 
-  // Notification toggles
-  const [dailySummary, setDailySummary] = useState(true);
-  const [budgetAlerts, setBudgetAlerts] = useState(true);
-  const [subReminders, setSubReminders] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
-  const [syncReminders, setSyncReminders] = useState(true);
-
   const loadData = useCallback(async () => {
     try {
-      const [budget, unsynced, daily, alerts, subRem, digest, syncRem] = await Promise.all([
+      const [budget, unsynced] = await Promise.all([
         getBudgetStatus().catch(() => ({ hasOverallBudget: false })),
         getUnsyncedExpenses().catch(() => []),
-        getSetting(NOTIF_KEYS.DAILY_SUMMARY).catch(() => 'true'),
-        getSetting(NOTIF_KEYS.BUDGET_ALERTS).catch(() => 'true'),
-        getSetting(NOTIF_KEYS.SUBSCRIPTION_REMINDERS).catch(() => 'true'),
-        getSetting('notif_weekly_digest').catch(() => 'true'),
-        getSetting('notif_sync_reminders').catch(() => 'true'),
       ]);
       setCurrentBudget(budget);
       setUnsyncedCount(unsynced.length);
-      setDailySummary(daily !== 'false');
-      setBudgetAlerts(alerts !== 'false');
-      setSubReminders(subRem !== 'false');
-      setWeeklyDigest(digest !== 'false');
-      setSyncReminders(syncRem !== 'false');
     } catch (e) {
       console.error('[Settings] load error:', e);
     }
   }, []);
 
   useEffect(() => { loadData(); }, []);
-
-  const toggleNotif = async (key, value, setter) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setter(value);
-    await setSetting(key, value ? 'true' : 'false');
-    if (key === NOTIF_KEYS.DAILY_SUMMARY) {
-      scheduleDailySummaryNotification();
-    }
-  };
 
   const handleSaveSync = () => {
     setScriptUrl(scriptUrl);
@@ -254,50 +228,6 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
               />
             </>
           )}
-        </View>
-
-        {/* Notifications Section */}
-        <Text style={styles.sectionLabel}>NOTIFICATIONS & ALERTS</Text>
-        <View style={styles.sectionCard}>
-          <ToggleRow
-            icon={<Bell size={18} color={COLORS.warning} />}
-            label="Daily Evening Summary"
-            sub="Daily spend & budget check at 8 PM"
-            value={dailySummary}
-            onToggle={(val) => toggleNotif(NOTIF_KEYS.DAILY_SUMMARY, val, setDailySummary)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            icon={<Bell size={18} color={COLORS.error} />}
-            label="Budget Alerts"
-            sub="Alert when reaching 80% & 100% budget"
-            value={budgetAlerts}
-            onToggle={(val) => toggleNotif(NOTIF_KEYS.BUDGET_ALERTS, val, setBudgetAlerts)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            icon={<Bell size={18} color={COLORS.accent} />}
-            label="Subscription Reminders"
-            sub="Remind on bill due dates"
-            value={subReminders}
-            onToggle={(val) => toggleNotif(NOTIF_KEYS.SUBSCRIPTION_REMINDERS, val, setSubReminders)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            icon={<Bell size={18} color={COLORS.info} />}
-            label="Weekly Financial Digest"
-            sub="Summary of total spend every Sunday"
-            value={weeklyDigest}
-            onToggle={(val) => toggleNotif('notif_weekly_digest', val, setWeeklyDigest)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            icon={<Bell size={18} color={COLORS.textMuted} />}
-            label="Unsynced Expense Alerts"
-            sub="Remind when offline transactions queue up"
-            value={syncReminders}
-            onToggle={(val) => toggleNotif('notif_sync_reminders', val, setSyncReminders)}
-          />
         </View>
 
         {/* Data Section */}
