@@ -22,17 +22,22 @@ export const NOTIF_KEYS = {
   LAST_DAILY_SUMMARY_DATE: 'notif_last_daily_summary_date',
 };
 
-// Configure foreground behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Configure foreground behavior safely
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch (e) {
+  console.log('[NotificationService] setNotificationHandler skipped:', e?.message || e);
+}
 
 /**
  * Initialize Notification Channels & Default Settings
+ * Safe, asynchronous, non-blocking.
  */
 export async function initNotifications() {
   try {

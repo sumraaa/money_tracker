@@ -28,6 +28,25 @@ export function toRupees(paise) {
   return paise / 100;
 }
 
+function formatIndianNumber(n, showPaise) {
+  try {
+    const parts = Math.abs(n).toFixed(showPaise ? 2 : 0).split('.');
+    let num = parts[0];
+    const dec = parts[1];
+
+    let lastThree = num.slice(-3);
+    const otherNumbers = num.slice(0, -3);
+    if (otherNumbers !== '') {
+      lastThree = ',' + lastThree;
+    }
+    const formattedInt = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+    const result = (n < 0 ? '-' : '') + formattedInt + (dec ? '.' + dec : '');
+    return result;
+  } catch {
+    return (n < 0 ? '-' : '') + Math.abs(n).toFixed(showPaise ? 2 : 0);
+  }
+}
+
 /**
  * Format a rupee amount as ₹X,XX,XXX.XX (Indian locale).
  * @param {number} amount - in rupees (not paise)
@@ -50,11 +69,19 @@ export function formatINR(amount, opts = {}) {
     return '₹' + (n / 1000).toFixed(1) + 'K';
   }
 
-  const formatted = n.toLocaleString('en-IN', {
-    minimumFractionDigits: showPaise ? 2 : 0,
-    maximumFractionDigits: showPaise ? 2 : 0,
-  });
-  return '₹' + formatted;
+  try {
+    const formatted = n.toLocaleString('en-IN', {
+      minimumFractionDigits: showPaise ? 2 : 0,
+      maximumFractionDigits: showPaise ? 2 : 0,
+    });
+    if (formatted && formatted !== 'NaN') {
+      return '₹' + formatted;
+    }
+  } catch {
+    // Fallback to manual formatting for Hermes compatibility
+  }
+
+  return '₹' + formatIndianNumber(n, showPaise);
 }
 
 /**

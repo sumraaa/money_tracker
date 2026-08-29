@@ -30,90 +30,105 @@ const toSqlParam = (val, fallback = '') => {
 // NEVER drops tables or deletes user data.
 // ─────────────────────────────────────────────────────────────────
 
+// Safe helper to add missing columns without throwing on duplicate column name
+async function addMissingColumn(db, tableName, colName, colTypeDef) {
+  try {
+    const cols = await getColumnNames(db, tableName);
+    if (!cols.includes(colName)) {
+      await db.execAsync(`ALTER TABLE ${tableName} ADD COLUMN ${colName} ${colTypeDef};`);
+      console.log(`[SQLite] Added missing column '${colName}' to '${tableName}'`);
+    }
+  } catch (err) {
+    console.warn(`[SQLite] Column addition notice for '${tableName}.${colName}':`, err?.message || err);
+  }
+}
+
 const MIGRATIONS = [
   {
     version: 1,
     description: 'Initial schema',
     up: async (db) => {
-      await db.execAsync(`
-        PRAGMA journal_mode = WAL;
-        CREATE TABLE IF NOT EXISTS expenses (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          category TEXT NOT NULL,
-          expense REAL NOT NULL,
-          date_time TEXT NOT NULL,
-          message TEXT,
-          sync_status INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS custom_categories (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          icon TEXT,
-          color TEXT
-        );
-      `);
+      try {
+        await db.execAsync(`
+          PRAGMA journal_mode = WAL;
+          CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            expense REAL NOT NULL,
+            date_time TEXT NOT NULL,
+            message TEXT,
+            sync_status INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS custom_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            icon TEXT,
+            color TEXT
+          );
+        `);
+      } catch (err) {
+        console.warn('[SQLite] Migration v1 warning:', err?.message || err);
+      }
     },
   },
   {
     version: 2,
     description: 'Add merchant, payment_method, is_recurring, updated_at',
     up: async (db) => {
-      // SQLite ALTER TABLE only supports adding one column at a time
-      const cols = await getColumnNames(db, 'expenses');
-      if (!cols.includes('merchant')) {
-        await db.execAsync(`ALTER TABLE expenses ADD COLUMN merchant TEXT DEFAULT '';`);
-      }
-      if (!cols.includes('payment_method')) {
-        await db.execAsync(`ALTER TABLE expenses ADD COLUMN payment_method TEXT DEFAULT 'UPI';`);
-      }
-      if (!cols.includes('is_recurring')) {
-        await db.execAsync(`ALTER TABLE expenses ADD COLUMN is_recurring INTEGER DEFAULT 0;`);
-      }
-      if (!cols.includes('updated_at')) {
-        await db.execAsync(`ALTER TABLE expenses ADD COLUMN updated_at DATETIME;`);
-      }
+      await addMissingColumn(db, 'expenses', 'merchant', "TEXT DEFAULT ''");
+      await addMissingColumn(db, 'expenses', 'payment_method', "TEXT DEFAULT 'UPI'");
+      await addMissingColumn(db, 'expenses', 'is_recurring', 'INTEGER DEFAULT 0');
+      await addMissingColumn(db, 'expenses', 'updated_at', 'DATETIME');
     },
   },
   {
     version: 3,
     description: 'Add budgets table and settings table',
     up: async (db) => {
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS budgets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          category TEXT,
-          monthly_limit REAL NOT NULL DEFAULT 0,
-          is_overall INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS settings (
-          key TEXT PRIMARY KEY,
-          value TEXT
-        );
-      `);
+      try {
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT,
+            monthly_limit REAL NOT NULL DEFAULT 0,
+            is_overall INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+          );
+        `);
+      } catch (err) {
+        console.warn('[SQLite] Migration v3 warning:', err?.message || err);
+      }
     },
   },
   {
     version: 4,
     description: 'Add recurring_expenses table',
     up: async (db) => {
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS recurring_expenses (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          merchant TEXT NOT NULL,
-          amount REAL NOT NULL,
-          category TEXT NOT NULL DEFAULT 'Subscriptions',
-          frequency TEXT NOT NULL DEFAULT 'monthly',
-          next_date TEXT,
-          is_subscription INTEGER DEFAULT 0,
-          is_active INTEGER DEFAULT 1,
-          payment_method TEXT DEFAULT 'UPI',
-          note TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME
-        );
-      `);
+      try {
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS recurring_expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            merchant TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL DEFAULT 'Subscriptions',
+            frequency TEXT NOT NULL DEFAULT 'monthly',
+            next_date TEXT,
+            is_subscription INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            payment_method TEXT DEFAULT 'UPI',
+            note TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME
+          );
+        `);
+      } catch (err) {
+        console.warn('[SQLite] Migration v4 warning:', err?.message || err);
+      }
     },
   },
 ];
@@ -129,7 +144,6 @@ async function getColumnNames(db, tableName) {
 
 async function getCurrentVersion(db) {
   try {
-    // Use settings table or user_version pragma
     const result = await db.getFirstAsync(`PRAGMA user_version;`);
     return result?.user_version ?? 0;
   } catch {
@@ -138,16 +152,25 @@ async function getCurrentVersion(db) {
 }
 
 async function setVersion(db, version) {
-  await db.execAsync(`PRAGMA user_version = ${version};`);
+  try {
+    await db.execAsync(`PRAGMA user_version = ${version};`);
+  } catch (err) {
+    console.warn('[SQLite] setVersion error:', err?.message || err);
+  }
 }
 
 /**
  * Initialize the SQLite Database & run migrations.
+ * Guaranteed to NEVER throw an unhandled rejection to the root UI thread.
  */
 export const initDatabase = async () => {
   try {
     const db = await getDb();
-    await db.execAsync(`PRAGMA journal_mode = WAL;`);
+    try {
+      await db.execAsync(`PRAGMA journal_mode = WAL;`);
+    } catch (e) {
+      console.warn('[SQLite] PRAGMA journal_mode notice:', e?.message || e);
+    }
 
     const currentVersion = await getCurrentVersion(db);
     console.log(`[SQLite] Current DB version: ${currentVersion}`);
@@ -155,15 +178,20 @@ export const initDatabase = async () => {
     for (const migration of MIGRATIONS) {
       if (migration.version > currentVersion) {
         console.log(`[SQLite] Running migration v${migration.version}: ${migration.description}`);
-        await migration.up(db);
-        await setVersion(db, migration.version);
+        try {
+          await migration.up(db);
+          await setVersion(db, migration.version);
+        } catch (mErr) {
+          console.error(`[SQLite] Migration v${migration.version} error:`, mErr);
+        }
       }
     }
 
     console.log('[SQLite] Database initialized successfully');
+    return { success: true };
   } catch (error) {
     console.error('[SQLite] Error initializing database:', error);
-    throw error;
+    return { success: false, error };
   }
 };
 

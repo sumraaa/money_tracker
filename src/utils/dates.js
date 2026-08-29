@@ -147,13 +147,23 @@ export function daysRemainingInMonth() {
   return lastDay - now.getDate() + 1;
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 /**
  * Format date for display: "27 Aug" or "27 Aug 2026"
  */
 export function formatShortDate(date) {
   const d = parseDate(date);
   const day = d.getDate();
-  const month = d.toLocaleDateString('en-IN', { month: 'short' });
+  let month;
+  try {
+    month = d.toLocaleDateString('en-IN', { month: 'short' });
+  } catch {
+    month = MONTH_NAMES[d.getMonth()];
+  }
+  if (!month) month = MONTH_NAMES[d.getMonth()];
+
   const thisYear = new Date().getFullYear();
   if (d.getFullYear() !== thisYear) {
     return `${day} ${month} ${d.getFullYear()}`;
@@ -166,11 +176,23 @@ export function formatShortDate(date) {
  */
 export function formatTime(date) {
   const d = parseDate(date);
-  return d.toLocaleTimeString('en-IN', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  try {
+    const formatted = d.toLocaleTimeString('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    if (formatted) return formatted;
+  } catch {
+    // Fallback
+  }
+
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // hour '0' should be '12'
+  return `${hours}:${minutes} ${ampm}`;
 }
 
 /**
@@ -186,7 +208,13 @@ export function relativeLabel(date) {
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
   if (diffDays < 7) {
-    return d.toLocaleDateString('en-IN', { weekday: 'long' });
+    try {
+      const weekday = d.toLocaleDateString('en-IN', { weekday: 'long' });
+      if (weekday) return weekday;
+    } catch {
+      // Fallback
+    }
+    return DAY_NAMES[d.getDay()];
   }
   return formatShortDate(d);
 }
