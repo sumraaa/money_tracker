@@ -16,7 +16,7 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
   useEffect(() => {
     TABS.forEach((tab, idx) => {
       Animated.spring(scales[idx], {
-        toValue: tab.id === activeTab ? 1.05 : 1,
+        toValue: tab.id === activeTab ? 1.08 : 1,
         useNativeDriver: true,
         friction: ANIMATION.spring.friction,
         tension: ANIMATION.spring.tension,
@@ -45,19 +45,19 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
               <Animated.View
                 style={[
                   styles.iconWrap,
-                  isActive && styles.iconWrapActive,
                   { transform: [{ scale: scales[idx] }] },
                 ]}
               >
                 <tab.Icon
                   size={20}
-                  color={isActive ? COLORS.accent : COLORS.textMuted}
+                  color={isActive ? '#FFFFFF' : '#555555'}
                   strokeWidth={isActive ? 2.2 : 1.6}
                 />
               </Animated.View>
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                 {tab.label}
               </Text>
+              {isActive ? <View style={styles.activeDot} /> : <View style={styles.dotPlaceholder} />}
             </TouchableOpacity>
           );
         })}
@@ -69,42 +69,59 @@ export default function CustomTabBar({ activeTab, onTabPress }) {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.sm,
+    paddingBottom: SPACING.md,
     paddingTop: SPACING.xs,
-    backgroundColor: COLORS.bg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
+    backgroundColor: '#050505',
   },
   container: {
     flexDirection: 'row',
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.sm,
+    backgroundColor: '#0A0A0A',
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 6,
     paddingHorizontal: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.xs,
+    paddingVertical: 4,
   },
   iconWrap: {
-    width: 36, height: 36,
-    alignItems: 'center', justifyContent: 'center',
-    borderRadius: RADIUS.md,
-  },
-  iconWrapActive: {
-    backgroundColor: COLORS.accentMuted,
+    width: 32,
+    height: 28,
+    alignItems: 'center',
+    justify: 'center',
   },
   tabLabel: {
     ...TYPOGRAPHY.labelXs,
-    marginTop: 3,
-    color: COLORS.textMuted,
+    marginTop: 2,
+    color: '#555555',
+    fontSize: 10,
+    letterSpacing: 0.8,
   },
   tabLabelActive: {
-    color: COLORS.accent,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FF4500',
+    marginTop: 4,
+  },
+  dotPlaceholder: {
+    width: 4,
+    height: 4,
+    marginTop: 4,
+    backgroundColor: 'transparent',
+  },
 });
+

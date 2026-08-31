@@ -166,9 +166,9 @@ export default function HistoryScreen({ onDataChanged }) {
     const d = new Date(dateKey + 'T00:00:00');
     const today = startOfToday();
     const diffDays = Math.round((today.getTime() - d.getTime()) / 86400000);
-    let label = formatShortDate(d);
-    if (diffDays === 0) label = 'Today';
-    else if (diffDays === 1) label = 'Yesterday';
+    let label = formatShortDate(d).toUpperCase();
+    if (diffDays === 0) label = 'TODAY · ' + label;
+    else if (diffDays === 1) label = 'YESTERDAY · ' + label;
 
     const groupTotal = grouped.find(g => g.key === dateKey)?.data.reduce((s, e) => s + parseFloat(e?.expense || 0), 0) || 0;
 
@@ -190,26 +190,23 @@ export default function HistoryScreen({ onDataChanged }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>History</Text>
+        <Text style={styles.screenTitle}>History.</Text>
         <TouchableOpacity style={styles.iconBtn} onPress={() => { setShowSearch(!showSearch); if (showSearch) setSearchQuery(''); }}>
-          {showSearch ? <X size={18} color={COLORS.textMuted} /> : <Search size={18} color={COLORS.textMuted} />}
+          {showSearch ? <X size={18} color="#FFFFFF" /> : <Search size={18} color="#FFFFFF" />}
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
       {showSearch && (
         <View style={styles.searchRow}>
           <TextInput style={styles.searchInput}
             placeholder="Search merchants, notes, categories..."
-            placeholderTextColor={COLORS.textDisabled}
+            placeholderTextColor="#555555"
             value={searchQuery} onChangeText={setSearchQuery} autoFocus
           />
         </View>
       )}
 
-      {/* Period Toggle */}
       <FlatList
         horizontal data={PERIODS} keyExtractor={(p) => p.id}
         showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodRow}
@@ -223,7 +220,6 @@ export default function HistoryScreen({ onDataChanged }) {
         )}
       />
 
-      {/* Summary */}
       <View style={styles.summaryRow}>
         <View>
           <Text style={styles.summaryTotal}>{formatINR(totalSpent, { showPaise: false })}</Text>
@@ -235,163 +231,211 @@ export default function HistoryScreen({ onDataChanged }) {
           setSortOption(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].id);
         }}>
           <Text style={styles.sortLabel}>{SORT_OPTIONS.find(s => s.id === sortOption)?.label}</Text>
-          <ChevronDown size={12} color={COLORS.accent} />
+          <ChevronDown size={12} color="#FF4500" />
         </TouchableOpacity>
       </View>
 
-      {/* Category filter */}
       {categoryFilter && (
         <View style={styles.filterRow}>
           <TouchableOpacity style={styles.filterChip} onPress={() => setCategoryFilter(null)}>
             <Text style={styles.filterText}>{categoryFilter}</Text>
-            <X size={12} color={COLORS.accent} />
+            <X size={12} color="#FF4500" />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* List */}
       {loading ? (
-        <ActivityIndicator color={COLORS.accent} style={{ marginTop: 60 }} />
-      ) : flatData.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color="#FF4500" size="small" />
+        </View>
+      ) : expenses.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🗒️</Text>
-          <Text style={styles.emptyTitle}>No records found</Text>
-          <Text style={styles.emptySub}>{searchQuery ? 'Try a different search term.' : 'No expenses for this period.'}</Text>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyTitle}>No transactions found</Text>
+          <Text style={styles.emptySub}>
+            {searchQuery ? `No results matching "${searchQuery}"` : 'No expenses recorded in this period.'}
+          </Text>
         </View>
       ) : (
         <FlatList
-          data={flatData} keyExtractor={(item) => item.key}
-          renderItem={({ item: row }) => {
-            if (row.type === 'header') return renderSectionHeader(row.dateKey);
-            return renderItem({ item: row.item });
-          }}
-          contentContainerStyle={styles.listContent}
+          data={flatData}
+          keyExtractor={(item) => item.key}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => {
+            if (item.type === 'header') {
+              return renderSectionHeader(item.dateKey);
+            }
+            return renderItem({ item: item.item });
+          }}
         />
       )}
 
-      {/* Transaction Detail Modal */}
-      <Modal visible={!!selectedExpense} transparent animationType="fade" onRequestClose={() => setSelectedExpense(null)}>
-        <TouchableOpacity style={styles.detailBackdrop} activeOpacity={1} onPress={() => setSelectedExpense(null)}>
-          <View style={styles.detailSheet} onStartShouldSetResponder={() => true} onTouchEnd={(e) => e.stopPropagation()}>
-            {selectedExpense && (
-              <>
-                <View style={styles.detailHeader}>
-                  <View style={[styles.detailIconWrap, { backgroundColor: getCategoryColor(selectedExpense.category) + '20' }]}>
-                    <Text style={{ fontSize: 24 }}>{getCategoryIcon(selectedExpense.category)}</Text>
-                  </View>
-                  <Text style={styles.detailAmount}>{formatINR(parseFloat(selectedExpense.expense), { showPaise: true })}</Text>
-                  <Text style={styles.detailLabel}>{selectedExpense.merchant || selectedExpense.category}</Text>
+      {selectedExpense && (
+        <Modal
+          visible={!!selectedExpense}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedExpense(null)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setSelectedExpense(null)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
+              <View style={styles.modalHeaderRow}>
+                <View style={[styles.modalIconWrap, { backgroundColor: getCategoryColor(selectedExpense.category) + '20' }]}>
+                  <Text style={{ fontSize: 24 }}>{getCategoryIcon(selectedExpense.category)}</Text>
                 </View>
-                <View style={styles.detailRows}>
-                  <DetailRow label="Category" value={selectedExpense.category} />
-                  {selectedExpense.merchant ? <DetailRow label="Merchant" value={selectedExpense.merchant} /> : null}
-                  {selectedExpense.message ? <DetailRow label="Note" value={selectedExpense.message} /> : null}
-                  <DetailRow label="Payment" value={selectedExpense.payment_method || 'UPI'} />
-                  <DetailRow label="Date" value={formatShortDate(selectedExpense.date_time)} />
-                  <DetailRow label="Time" value={formatTime(selectedExpense.date_time)} />
-                  <DetailRow label="Synced" value={selectedExpense.sync_status === 1 ? 'Yes' : 'Waiting'} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalTitle}>{selectedExpense.merchant || selectedExpense.category}</Text>
+                  <Text style={styles.modalSub}>{selectedExpense.category} · {formatShortDate(selectedExpense.date_time)}</Text>
                 </View>
-                <View style={styles.detailActions}>
-                  <TouchableOpacity style={styles.detailActionBtn}
-                    onPress={() => {
-                      setSelectedExpense(null);
-                      handleDelete(selectedExpense.id, selectedExpense.merchant || selectedExpense.category, selectedExpense.expense);
-                    }}>
-                    <Trash2 size={16} color={COLORS.error} />
-                    <Text style={[styles.detailActionText, { color: COLORS.error }]}>Delete</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.detailActionBtn}
-                    onPress={() => { setCategoryFilter(selectedExpense.category); setSelectedExpense(null); }}>
-                    <Search size={16} color={COLORS.accent} />
-                    <Text style={styles.detailActionText}>Filter category</Text>
-                  </TouchableOpacity>
+                <Text style={styles.modalAmount}>{formatINR(selectedExpense.expense)}</Text>
+              </View>
+
+              {selectedExpense.message ? (
+                <View style={styles.modalNoteBox}>
+                  <Text style={styles.modalNoteLabel}>NOTE</Text>
+                  <Text style={styles.modalNoteText}>{selectedExpense.message}</Text>
                 </View>
-              </>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+              ) : null}
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalActionBtn, styles.modalDeleteBtn]}
+                  onPress={() => {
+                    const exp = selectedExpense;
+                    setSelectedExpense(null);
+                    handleDelete(exp.id, exp.merchant || exp.category, exp.expense);
+                  }}
+                >
+                  <Trash2 size={16} color={COLORS.error} />
+                  <Text style={[styles.modalActionText, { color: COLORS.error }]}>Delete</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalActionBtn}
+                  onPress={() => setSelectedExpense(null)}
+                >
+                  <Text style={styles.modalActionText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 }
-
-function DetailRow({ label, value }) {
-  return (
-    <View style={detailStyles.row}>
-      <Text style={detailStyles.label}>{label}</Text>
-      <Text style={detailStyles.value}>{value}</Text>
-    </View>
-  );
-}
-
-const detailStyles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
-  label: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted },
-  value: { ...TYPOGRAPHY.body, color: COLORS.textPrimary, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-});
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xxl, paddingTop: SPACING.xl, paddingBottom: SPACING.md },
-  screenTitle: { ...TYPOGRAPHY.h1, color: COLORS.textPrimary },
-  iconBtn: { width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.bgElevated, justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
+  container: { flex: 1, backgroundColor: '#050505' },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.xxl, paddingTop: SPACING.lg, paddingBottom: SPACING.xs,
+  },
+  screenTitle: {
+    fontFamily: TYPOGRAPHY.h1.fontFamily,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  iconBtn: {
+    width: 40, height: 40, borderRadius: RADIUS.pill, backgroundColor: '#111111',
+    justify: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
 
-  searchRow: { paddingHorizontal: SPACING.xxl, marginBottom: SPACING.md },
-  searchInput: { backgroundColor: COLORS.bgElevated, color: COLORS.textPrimary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: 12, ...TYPOGRAPHY.body, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
+  searchRow: { paddingHorizontal: SPACING.xxl, marginBottom: SPACING.sm },
+  searchInput: {
+    backgroundColor: '#111111', color: '#FFFFFF', borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.lg, paddingVertical: 10, fontSize: 14,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
 
-  periodRow: { paddingHorizontal: SPACING.xxl, gap: SPACING.sm, marginBottom: SPACING.md },
-  periodChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.bgElevated, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
-  periodChipActive: { backgroundColor: COLORS.accentMuted, borderColor: COLORS.accent },
-  periodText: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
-  periodTextActive: { color: COLORS.accent },
+  periodRow: { paddingHorizontal: SPACING.xxl, paddingVertical: SPACING.xs, gap: 6 },
+  periodChip: {
+    paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: RADIUS.pill,
+    backgroundColor: '#111111', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  periodChipActive: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
+  periodText: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 12, color: '#888888', fontWeight: '600' },
+  periodTextActive: { color: '#000000', fontWeight: '800' },
 
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xxl, marginBottom: SPACING.md },
-  summaryTotal: { ...TYPOGRAPHY.displaySm, color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
-  summaryMeta: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted, marginTop: 3 },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.accentBg, paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.borderAccent },
-  sortLabel: { ...TYPOGRAPHY.labelSm, color: COLORS.accent },
+  summaryRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.xxl, paddingVertical: SPACING.md, marginHorizontal: SPACING.xxl,
+    marginVertical: SPACING.xs, backgroundColor: '#111111', borderRadius: 20,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  summaryTotal: { fontFamily: TYPOGRAPHY.monoXl.fontFamily, fontSize: 20, color: '#FFFFFF', fontWeight: '800' },
+  summaryMeta: { fontFamily: TYPOGRAPHY.bodySm.fontFamily, fontSize: 11, color: '#888888', marginTop: 2 },
+  sortBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 69, 0, 0.12)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: 'rgba(255, 69, 0, 0.3)',
+  },
+  sortLabel: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 11, color: '#FF4500', fontWeight: '700' },
 
   filterRow: { paddingHorizontal: SPACING.xxl, marginBottom: SPACING.md },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.accentBg, paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill, alignSelf: 'flex-start', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.borderAccent },
-  filterText: { ...TYPOGRAPHY.labelSm, color: COLORS.accent },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 69, 0, 0.15)', paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255, 69, 0, 0.3)' },
+  filterText: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 12, color: '#FF4500' },
 
-  dateHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xxl, paddingVertical: SPACING.sm, backgroundColor: COLORS.bgSubtle },
-  dateHeaderText: { ...TYPOGRAPHY.label, color: COLORS.textSecondary },
-  dateHeaderTotal: { ...TYPOGRAPHY.monoSm, color: COLORS.textMuted },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  txRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.xxl, paddingVertical: SPACING.md, gap: SPACING.md },
-  txIconWrap: { width: 40, height: 40, borderRadius: RADIUS.md, justifyContent: 'center', alignItems: 'center' },
+  dateHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.xxl, paddingTop: SPACING.lg, paddingBottom: SPACING.xs,
+  },
+  dateHeaderText: { fontFamily: TYPOGRAPHY.overline.fontFamily, fontSize: 10, color: '#888888', letterSpacing: 1.5 },
+  dateHeaderTotal: { fontFamily: TYPOGRAPHY.monoSm.fontFamily, fontSize: 12, color: '#888888', fontWeight: '700' },
+
+  txRow: {
+    flexDirection: 'row', alignItems: 'center', marginHorizontal: SPACING.xxl, marginBottom: SPACING.xs,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, backgroundColor: '#111111',
+    borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', gap: SPACING.md,
+  },
+  txIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   txIcon: { fontSize: 18 },
   txDetails: { flex: 1 },
-  txLabel: { ...TYPOGRAPHY.body, color: COLORS.textPrimary, fontWeight: '600', marginBottom: 2 },
-  unusualTag: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)', paddingHorizontal: 6, paddingVertical: 1,
-    borderRadius: RADIUS.xs, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.error,
-  },
-  unusualText: { ...TYPOGRAPHY.labelXs, color: COLORS.error, fontSize: 9, fontWeight: '700' },
-  txSub: { ...TYPOGRAPHY.bodySm, color: COLORS.textSecondary },
-  txMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  txDate: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
-  txPayment: { ...TYPOGRAPHY.labelXs, color: COLORS.textMuted, backgroundColor: COLORS.bgSurface, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 3 },
-  syncDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: COLORS.warning },
-  txAmount: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary, fontWeight: '700' },
+  txLabel: { fontFamily: TYPOGRAPHY.body.fontFamily, fontSize: 15, color: '#FFFFFF', fontWeight: '600' },
+  unusualTag: { backgroundColor: 'rgba(255, 69, 0, 0.15)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  unusualText: { fontSize: 10, color: '#FF4500', fontWeight: '700' },
+  txSub: { fontFamily: TYPOGRAPHY.bodySm.fontFamily, fontSize: 12, color: '#888888' },
+  txMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  txDate: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 11, color: '#666666' },
+  txPayment: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 10, color: '#888888', marginLeft: 4 },
+  syncDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: COLORS.warning, marginLeft: 6 },
+  txAmount: { fontFamily: TYPOGRAPHY.mono.fontFamily, fontSize: 16, color: '#FFFFFF', fontWeight: '700' },
 
-  listContent: { paddingBottom: 40 },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  listContent: { paddingBottom: 60 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingHorizontal: SPACING.xxxl },
   emptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
-  emptyTitle: { ...TYPOGRAPHY.h3, color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  emptySub: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, textAlign: 'center' },
+  emptyTitle: { fontFamily: TYPOGRAPHY.h3.fontFamily, fontSize: 18, color: '#FFFFFF', marginBottom: SPACING.xs },
+  emptySub: { fontFamily: TYPOGRAPHY.bodySm.fontFamily, fontSize: 13, color: '#888888', textAlign: 'center' },
 
-  // Detail Modal
-  detailBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
-  detailSheet: { backgroundColor: COLORS.bgElevated, borderTopLeftRadius: RADIUS.xxl, borderTopRightRadius: RADIUS.xxl, padding: SPACING.xxl, paddingBottom: SPACING.xxxxl, borderTopWidth: 1, borderColor: COLORS.borderStrong },
-  detailHeader: { alignItems: 'center', marginBottom: SPACING.xl },
-  detailIconWrap: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
-  detailAmount: { ...TYPOGRAPHY.displayMd, color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
-  detailLabel: { ...TYPOGRAPHY.body, color: COLORS.textMuted, marginTop: SPACING.xs },
-  detailRows: { marginBottom: SPACING.xl },
-  detailActions: { flexDirection: 'row', gap: SPACING.md },
-  detailActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, backgroundColor: COLORS.bgSurface, paddingVertical: SPACING.lg, borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
-  detailActionText: { ...TYPOGRAPHY.label, color: COLORS.accent },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#111111', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: SPACING.xxl, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  modalHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.lg },
+  modalIconWrap: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontFamily: TYPOGRAPHY.h2.fontFamily, fontSize: 18, color: '#FFFFFF' },
+  modalSub: { fontFamily: TYPOGRAPHY.bodySm.fontFamily, fontSize: 12, color: '#888888', marginTop: 2 },
+  modalAmount: { fontFamily: TYPOGRAPHY.monoXl.fontFamily, fontSize: 20, color: '#FF4500' },
+  modalNoteBox: {
+    backgroundColor: '#181818', padding: SPACING.md, borderRadius: 12, marginBottom: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  modalNoteLabel: { fontFamily: TYPOGRAPHY.overline.fontFamily, fontSize: 10, color: '#888888', marginBottom: 2 },
+  modalNoteText: { fontFamily: TYPOGRAPHY.body.fontFamily, fontSize: 14, color: '#FFFFFF' },
+  modalActions: { flexDirection: 'row', gap: SPACING.md, justifyContent: 'flex-end' },
+  modalActionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: SPACING.xl,
+    borderRadius: RADIUS.pill, backgroundColor: '#181818', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  modalDeleteBtn: { backgroundColor: COLORS.errorBg, borderColor: COLORS.errorBorder },
+  modalActionText: { fontFamily: TYPOGRAPHY.label.fontFamily, fontSize: 14, color: '#FFFFFF' },
 });

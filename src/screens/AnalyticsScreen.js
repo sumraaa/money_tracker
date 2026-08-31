@@ -90,7 +90,7 @@ export default function AnalyticsScreen() {
     ? chartData.map((d) => ({
         value: typeof d?.value === 'number' && !isNaN(d.value) ? d.value : 0,
         label: typeof d?.label === 'string' ? d.label : '',
-        frontColor: COLORS.accent,
+        frontColor: '#FF4500',
       }))
     : [];
 
@@ -105,7 +105,7 @@ export default function AnalyticsScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Analytics</Text>
+        <Text style={styles.screenTitle}>Analytics.</Text>
       </View>
 
       {/* Spending Summary */}
@@ -132,7 +132,7 @@ export default function AnalyticsScreen() {
         </View>
       )}
 
-      {/* Timeframe Toggle */}
+      {/* Timeframe Toggle Pills */}
       <View style={styles.toggleRow}>
         {TIMEFRAMES.map((tf) => (
           <TouchableOpacity key={tf.id} activeOpacity={0.7}
@@ -143,9 +143,14 @@ export default function AnalyticsScreen() {
         ))}
       </View>
 
-      {/* Hero Metric */}
+      {/* Hero Metric Card */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroMeta}>TOTAL · THIS {timeframe.toUpperCase()}</Text>
+        <View style={styles.heroCardHeader}>
+          <Text style={styles.heroMeta}>TOTAL · THIS {timeframe.toUpperCase()}</Text>
+          <View style={styles.cardPillBadge}>
+            <Text style={styles.cardPillText}>01</Text>
+          </View>
+        </View>
         <Text style={styles.heroAmount}>{formatINR(totalSpent, { showPaise: false })}</Text>
         <View style={styles.burnRow}>
           {burnRate.pct !== null ? (
@@ -163,21 +168,19 @@ export default function AnalyticsScreen() {
         </View>
       </View>
 
-      {/* Mini Metrics */}
-      <View style={styles.metricsRow}>
-        <View style={styles.metricChip}>
-          <Text style={styles.metricLabel}>AVG / DAY</Text>
-          <Text style={styles.metricValue}>{formatINR(avgDaily, { showPaise: false })}</Text>
+      {/* Mini Metrics Dual Column Grid */}
+      <View style={styles.metricsGrid}>
+        <View style={styles.metricGridItem}>
+          <Text style={styles.metricGridLabel}>AVG / DAY</Text>
+          <Text style={styles.metricGridValue}>{formatINR(avgDaily, { showPaise: false })}</Text>
         </View>
-        <View style={styles.metricDivider} />
-        <View style={styles.metricChip}>
-          <Text style={styles.metricLabel}>TRANSACTIONS</Text>
-          <Text style={styles.metricValue}>{txCount}</Text>
+        <View style={styles.metricGridItem}>
+          <Text style={styles.metricGridLabel}>TRANSACTIONS</Text>
+          <Text style={styles.metricGridValue}>{txCount}</Text>
         </View>
-        <View style={styles.metricDivider} />
-        <View style={styles.metricChip}>
-          <Text style={styles.metricLabel}>PROJECTED</Text>
-          <Text style={styles.metricValue}>{formatINR(dashboard?.projected || 0, { showPaise: false, compact: true })}</Text>
+        <View style={styles.metricGridItem}>
+          <Text style={styles.metricGridLabel}>PROJECTED</Text>
+          <Text style={styles.metricGridValue}>{formatINR(dashboard?.projected || 0, { showPaise: false, compact: true })}</Text>
         </View>
       </View>
 
@@ -186,7 +189,6 @@ export default function AnalyticsScreen() {
         <View style={styles.scoreCard}>
           <View style={styles.scoreCircle}>
             <Text style={styles.scoreNum}>{score.score}</Text>
-            <Text style={styles.scoreOf}>/100</Text>
           </View>
           <View style={styles.scoreInfo}>
             <Text style={styles.scoreTitle}>Spending Score</Text>
@@ -197,10 +199,15 @@ export default function AnalyticsScreen() {
 
       {/* Chart */}
       <View style={styles.chartCard}>
-        <Text style={styles.sectionTitle}>DAILY SPEND</Text>
+        <View style={styles.chartCardHeader}>
+          <Text style={styles.sectionTitle}>DAILY SPEND CHART</Text>
+          <View style={styles.cardPillBadge}>
+            <Text style={styles.cardPillText}>02</Text>
+          </View>
+        </View>
         {loading ? (
           <View style={styles.emptyChart}>
-            <ActivityIndicator color={COLORS.accent} size="small" />
+            <ActivityIndicator color="#FF4500" size="small" />
             <Text style={styles.emptyChartText}>Loading…</Text>
           </View>
         ) : !hasData ? (
@@ -214,44 +221,16 @@ export default function AnalyticsScreen() {
             data={safeData} width={CHART_WIDTH - 40} height={160}
             barWidth={safeData.length > 15 ? 6 : safeData.length > 7 ? 10 : 16}
             spacing={safeData.length > 15 ? 3 : safeData.length > 7 ? 6 : 12}
-            barBorderRadius={3} frontColor={COLORS.accent}
-            yAxisColor="transparent" xAxisColor={COLORS.border}
-            yAxisTextStyle={{ color: COLORS.textMuted, fontSize: 10 }}
-            xAxisLabelTextStyle={{ color: COLORS.textMuted, fontSize: 9 }}
+            barBorderRadius={4} frontColor="#FF4500"
+            yAxisColor="transparent" xAxisColor="rgba(255, 255, 255, 0.08)"
+            yAxisTextStyle={{ color: '#888888', fontSize: 10 }}
+            xAxisLabelTextStyle={{ color: '#888888', fontSize: 9 }}
             noOfSections={4} maxValue={maxVal * 1.2}
-            backgroundColor="transparent" rulesColor={COLORS.borderSubtle}
+            backgroundColor="transparent" rulesColor="rgba(255, 255, 255, 0.04)"
             rulesType="solid" hideOrigin isAnimated animationDuration={400}
           />
         )}
       </View>
-
-      {/* Category Breakdown */}
-      {categoryBreakdown.length > 0 && (
-        <View style={styles.breakdownCard}>
-          <Text style={styles.sectionTitle}>WHERE DID YOUR MONEY GO?</Text>
-          {categoryBreakdown.slice(0, 8).map((item, idx) => {
-            const total = categoryBreakdown.reduce((s, c) => s + (c.total || 0), 0);
-            const pct = total > 0 ? ((item.total || 0) / total) * 100 : 0;
-            const catColor = getCategoryColor(item.category);
-            const catIcon = getCategoryIcon(item.category);
-            return (
-              <View key={`${item.category}-${idx}`} style={styles.breakdownRow}>
-                <Text style={styles.breakdownIcon}>{catIcon}</Text>
-                <View style={styles.breakdownInfo}>
-                  <View style={styles.breakdownLabelRow}>
-                    <Text style={styles.breakdownCat} numberOfLines={1}>{item.category}</Text>
-                    <Text style={styles.breakdownAmt}>{formatINR(item.total || 0, { showPaise: false })}</Text>
-                  </View>
-                  <View style={styles.breakdownBarBg}>
-                    <View style={[styles.breakdownBarFill, { width: `${Math.max(pct, 1)}%`, backgroundColor: catColor }]} />
-                  </View>
-                </View>
-                <Text style={styles.breakdownPct}>{pct.toFixed(0)}%</Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
 
       {/* Budget Status */}
       {budget?.hasOverallBudget && (

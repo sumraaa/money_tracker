@@ -1,61 +1,63 @@
-/**
- * ZERO FRICTION — Design System
- * Premium Dark Fintech Aesthetic
- * All visual tokens centralized here. No scattered arbitrary values.
- *
- * TYPOGRAPHY: Sized for real phone readability, not desktop previews.
- * COLORS: Layered near-black with restrained accent usage.
- */
+import { Platform } from 'react-native';
+
+export const SERIF_FONT = Platform.select({ ios: 'Georgia', android: 'serif' });
+export const MONO_FONT = Platform.select({ ios: 'Menlo', android: 'monospace' });
 
 export const COLORS = {
-  // Backgrounds (near-black layers)
-  bg: '#09090B',
-  bgElevated: '#111113',
-  bgSurface: '#18181B',
-  bgSubtle: '#1C1C1F',
-  bgHover: '#27272A',
-  bgInput: '#141416',
+  // Backgrounds (pitch black & dark zinc layers)
+  background: '#050505',
+  bg: '#050505',
+  card: '#111111',
+  bgElevated: '#111111',
+  cardElevated: '#161616',
+  bgSurface: '#181818',
+  bgSubtle: '#0E0E0E',
+  bgHover: '#222222',
+  bgInput: '#141414',
+
+  // Accent (Superdesign Vivid Flame Orange & Warm secondary)
+  accent: '#FF4500',
+  accentGlow: 'rgba(255, 69, 0, 0.25)',
+  accentSecondary: '#FFE0E0',
+  accentMuted: 'rgba(255, 69, 0, 0.15)',
+  accentStrong: '#FF4500',
+  accentBg: 'rgba(255, 69, 0, 0.10)',
+
+  // Text Hierarchy
+  textPrimary: '#FFFFFF',
+  textSecondary: '#A1A1AA',
+  textMuted: '#888888',
+  textDim: '#444444',
+  textDisabled: '#555555',
+  textInverse: '#050505',
 
   // Borders
-  border: 'rgba(255,255,255,0.06)',
-  borderSubtle: 'rgba(255,255,255,0.04)',
-  borderStrong: 'rgba(255,255,255,0.10)',
-  borderAccent: 'rgba(129,140,248,0.18)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderSubtle: 'rgba(255, 255, 255, 0.04)',
+  borderStrong: 'rgba(255, 255, 255, 0.14)',
+  borderAccent: 'rgba(255, 69, 0, 0.4)',
 
-  // Text
-  textPrimary: '#FAFAFA',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A',
-  textDisabled: '#3F3F46',
-  textInverse: '#09090B',
-
-  // Accent (restrained indigo-violet)
-  accent: '#818CF8',
-  accentMuted: 'rgba(129,140,248,0.12)',
-  accentStrong: '#6366F1',
-  accentBg: 'rgba(99,102,241,0.06)',
-
-  // Semantic
+  // Semantic Colors
   success: '#34D399',
   successMuted: '#059669',
-  successBg: 'rgba(52,211,153,0.08)',
-  successBorder: 'rgba(52,211,153,0.20)',
+  successBg: 'rgba(52, 211, 153, 0.08)',
+  successBorder: 'rgba(52, 211, 153, 0.20)',
 
   warning: '#FBBF24',
   warningMuted: '#D97706',
-  warningBg: 'rgba(251,191,36,0.08)',
-  warningBorder: 'rgba(251,191,36,0.20)',
+  warningBg: 'rgba(251, 191, 36, 0.08)',
+  warningBorder: 'rgba(251, 191, 36, 0.20)',
 
   error: '#F87171',
   errorMuted: '#DC2626',
-  errorBg: 'rgba(248,113,113,0.08)',
-  errorBorder: 'rgba(248,113,113,0.20)',
+  errorBg: 'rgba(248, 113, 113, 0.08)',
+  errorBorder: 'rgba(248, 113, 113, 0.20)',
 
   info: '#60A5FA',
-  infoBg: 'rgba(96,165,250,0.08)',
+  infoBg: 'rgba(96, 165, 250, 0.08)',
 
-  // Chart palette (harmonious)
-  chart: ['#818CF8', '#34D399', '#FBBF24', '#F87171', '#60A5FA', '#C084FC', '#FB923C'],
+  // Chart Palette (Flame Superdesign dominant)
+  chart: ['#FF4500', '#FFE0E0', '#34D399', '#FBBF24', '#60A5FA', '#C084FC', '#F472B6'],
 };
 
 export const SPACING = {
@@ -80,67 +82,83 @@ export const RADIUS = {
 };
 
 /**
- * TYPOGRAPHY HIERARCHY
- * Designed for real-world phone distance reading.
- * Primary financial numbers: 34-40pt
- * Section titles: 16-18pt
- * Body/transaction text: 15-16pt
- * Meta/labels: 12-13pt
- * Overlines: 11pt
+ * EDITORIAL TYPOGRAPHY HIERARCHY
+ * Editorial Serif headers paired with clean geometric monospace & sans-serif micro-labels.
  */
 export const TYPOGRAPHY = {
-  // Display (hero financial numbers)
-  displayLg: { fontSize: 40, fontWeight: '800', letterSpacing: -1 },
-  displayMd: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
-  displaySm: { fontSize: 24, fontWeight: '700', letterSpacing: -0.3 },
+  // Editorial Display Headers (Serif)
+  displayLg: { fontFamily: SERIF_FONT, fontSize: 40, fontWeight: '600', letterSpacing: -0.5 },
+  displayMd: { fontFamily: SERIF_FONT, fontSize: 32, fontWeight: '600', letterSpacing: -0.5 },
+  displaySm: { fontFamily: SERIF_FONT, fontSize: 24, fontWeight: '600', letterSpacing: -0.3 },
 
-  // Headings
-  h1: { fontSize: 22, fontWeight: '700', lineHeight: 28 },
-  h2: { fontSize: 18, fontWeight: '700', lineHeight: 24 },
-  h3: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  // Headings (Serif)
+  h1: { fontFamily: SERIF_FONT, fontSize: 24, fontWeight: '600', lineHeight: 30 },
+  h2: { fontFamily: SERIF_FONT, fontSize: 20, fontWeight: '600', lineHeight: 26 },
+  h3: { fontFamily: SERIF_FONT, fontSize: 17, fontWeight: '600', lineHeight: 23 },
 
-  // Body
+  // Body Text
   bodyLg: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
   body: { fontSize: 15, fontWeight: '400', lineHeight: 22 },
   bodySm: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
 
-  // Labels
+  // Micro Labels (Geometric / Monospace)
   label: { fontSize: 14, fontWeight: '600' },
-  labelSm: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
-  labelXs: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5 },
+  labelSm: { fontFamily: MONO_FONT, fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+  labelXs: { fontFamily: MONO_FONT, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
 
-  // Overline (section headers)
-  overline: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  // Overlines
+  overline: { fontFamily: MONO_FONT, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
 
-  // Mono (financial numbers)
-  monoXl: { fontSize: 22, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  monoLg: { fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  mono: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  monoSm: { fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  // Tabular Numerics (Monospace)
+  monoXl: { fontFamily: MONO_FONT, fontSize: 22, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  monoLg: { fontFamily: MONO_FONT, fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  mono: { fontFamily: MONO_FONT, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  monoSm: { fontFamily: MONO_FONT, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
+};
+
+export const CARD_STYLES = {
+  rounded3xl: {
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xl,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardFlame: {
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xl,
+    backgroundColor: COLORS.accent,
+  },
+  pillBadge: {
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
 };
 
 export const ELEVATION = {
   none: {},
   sm: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
   lg: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 12,
   },
 };
 
@@ -152,14 +170,13 @@ export const ANIMATION = {
   springBouncy: { friction: 6, tension: 80 },
 };
 
-// Minimum touch target (48px per Android guidelines)
 export const TOUCH = {
   minTarget: 48,
 };
 
 // ─── Category System ─────────────────────────────────────────────
 export const DEFAULT_CATEGORIES = [
-  { id: 'food', name: 'Food', icon: '🍔', color: '#F87171' },
+  { id: 'food', name: 'Food', icon: '🍔', color: '#FF4500' },
   { id: 'transport', name: 'Transport', icon: '🚗', color: '#FBBF24' },
   { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#C084FC' },
   { id: 'bills', name: 'Bills', icon: '📄', color: '#60A5FA' },
@@ -168,11 +185,11 @@ export const DEFAULT_CATEGORIES = [
   { id: 'entertainment', name: 'Entertainment', icon: '🎬', color: '#FB923C' },
   { id: 'travel', name: 'Travel', icon: '✈️', color: '#38BDF8' },
   { id: 'personal', name: 'Personal', icon: '👤', color: '#A78BFA' },
-  { id: 'subscriptions', name: 'Subscriptions', icon: '🔄', color: '#818CF8' },
+  { id: 'subscriptions', name: 'Subscriptions', icon: '🔄', color: '#FFE0E0' },
   { id: 'fees', name: 'Fees', icon: '🏦', color: '#94A3B8' },
   { id: 'family', name: 'Family', icon: '👨‍👩‍👧', color: '#F9A8D4' },
   { id: 'gifts', name: 'Gifts', icon: '🎁', color: '#FCD34D' },
-  { id: 'other', name: 'Other', icon: '💳', color: '#71717A' },
+  { id: 'other', name: 'Other', icon: '💳', color: '#888888' },
 ];
 
 export const PAYMENT_METHODS = [
@@ -184,7 +201,6 @@ export const PAYMENT_METHODS = [
   { id: 'other', name: 'Other', icon: '💰' },
 ];
 
-// Known merchant → category mappings for smart defaults
 export const MERCHANT_HINTS = {
   'swiggy': 'Food',
   'zomato': 'Food',
@@ -215,3 +231,4 @@ export const MERCHANT_HINTS = {
   'movie': 'Entertainment',
   'pvr': 'Entertainment',
 };
+

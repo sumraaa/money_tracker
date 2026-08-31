@@ -207,15 +207,18 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
     <>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.dateText}>{dateStr}</Text>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.brandTitle}>Superdesign.</Text>
+          <View style={styles.statusBadge}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>NYC / IST • LIVE</Text>
+          </View>
         </View>
         <View style={styles.headerRight}>
           {/* Sync indicator */}
           {syncStatus?.isSyncing ? (
             <View style={styles.syncIndicator}>
-              <RefreshCw size={13} color={COLORS.accent} />
+              <RefreshCw size={13} color="#FF4500" />
             </View>
           ) : unsyncedCount > 0 ? (
             <TouchableOpacity style={styles.syncBadge} onPress={handleRefresh}>
@@ -227,29 +230,35 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
             style={styles.settingsBtn}
             onPress={onOpenSettings}
           >
-            <Settings size={18} color={COLORS.textMuted} />
+            <Settings size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Today's Spend — Hero */}
+      {/* Today's Spend — Hero Card 1 (Red / Flame Aesthetic) */}
       <View style={styles.heroSection}>
-        <Text style={styles.heroLabel}>Spent today</Text>
+        <View style={styles.heroHeaderRow}>
+          <Text style={styles.heroLabel}>SPENT TODAY</Text>
+          <View style={styles.heroPillBadge}>
+            <Text style={styles.heroPillText}>01</Text>
+          </View>
+        </View>
+
         <Text style={styles.heroAmount}>
           {formatINR(todayTotal, { showPaise: false })}
         </Text>
 
-        {/* Supporting metrics */}
+        {/* Supporting metrics in pitch-black layout */}
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>This month</Text>
+            <Text style={styles.metricLabel}>THIS MONTH</Text>
             <Text style={styles.metricValue}>
               {formatINR(monthTotal, { showPaise: false, compact: monthTotal >= 100000 })}
             </Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Daily avg</Text>
+            <Text style={styles.metricLabel}>DAILY AVG</Text>
             <Text style={styles.metricValue}>
               {formatINR(dailyAvg, { showPaise: false })}
             </Text>
@@ -258,11 +267,8 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
             <>
               <View style={styles.metricDivider} />
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Safe to spend</Text>
-                <Text style={[
-                  styles.metricValue,
-                  safeToSpend.isOverToday && { color: COLORS.warning },
-                ]}>
+                <Text style={styles.metricLabel}>SAFE TO SPEND</Text>
+                <Text style={styles.metricValue}>
                   {formatINR(safeToSpend.amount, { showPaise: false })}
                 </Text>
               </View>
@@ -272,12 +278,8 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
             <>
               <View style={styles.metricDivider} />
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Remaining</Text>
-                <Text style={[
-                  styles.metricValue,
-                  budget.isOverBudget && { color: COLORS.error },
-                  !budget.isOverBudget && budget.percentUsed >= 80 && { color: COLORS.warning },
-                ]}>
+                <Text style={styles.metricLabel}>REMAINING</Text>
+                <Text style={styles.metricValue}>
                   {formatINR(budget.remaining || 0, { showPaise: false })}
                 </Text>
               </View>
@@ -288,19 +290,25 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
 
       {/* Budget progress */}
       {budget.hasOverallBudget && (
-        <View style={styles.budgetBar}>
+        <View style={styles.budgetCard}>
+          <View style={styles.budgetCardHeader}>
+            <Text style={styles.budgetCardTitle}>MONTHLY BUDGET</Text>
+            <View style={styles.budgetPillBadge}>
+              <Text style={styles.budgetPillText}>02</Text>
+            </View>
+          </View>
           <View style={styles.budgetBarTrack}>
             <View
               style={[
                 styles.budgetBarFill,
-                { width: `${Math.min(budget.percentUsed, 100)}%` },
+                { width: `${Math.min(budget.percentUsed || 0, 100)}%` },
                 budget.isOverBudget && { backgroundColor: COLORS.error },
                 budget.percentUsed >= 80 && !budget.isOverBudget && { backgroundColor: COLORS.warning },
               ]}
             />
           </View>
           <Text style={styles.budgetBarLabel}>
-            {budget.percentUsed?.toFixed(0) || 0}% of {formatINR(budget.overallBudget, { showPaise: false })} budget
+            {budget.percentUsed?.toFixed(0) || 0}% used of {formatINR(budget.overallBudget, { showPaise: false })} limit
           </Text>
         </View>
       )}
@@ -335,9 +343,9 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
         </View>
       )}
 
-      {/* Quick Log CTA */}
+      {/* Quick Log CTA - Full Width High Contrast Button */}
       <TouchableOpacity
-        activeOpacity={0.75}
+        activeOpacity={0.85}
         style={styles.quickLogBtn}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -345,19 +353,19 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
         }}
       >
         <View style={styles.quickLogIconWrap}>
-          <Plus size={20} color={COLORS.textPrimary} />
+          <Plus size={20} color="#000000" />
         </View>
         <View style={styles.quickLogTextWrap}>
-          <Text style={styles.quickLogTitle}>Quick Log</Text>
-          <Text style={styles.quickLogSub}>Record an expense</Text>
+          <Text style={styles.quickLogTitle}>Quick Log Expense</Text>
+          <Text style={styles.quickLogSub}>Record a transaction instantly</Text>
         </View>
-        <ChevronRight size={16} color={COLORS.textMuted} />
+        <ChevronRight size={18} color="#000000" />
       </TouchableOpacity>
 
       {/* Recent Activity Header */}
       {expenses.length > 0 && (
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
           <Text style={styles.sectionCount}>{expenses.length}</Text>
         </View>
       )}
@@ -376,7 +384,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="light-content" backgroundColor="#050505" />
 
       <FlatList
         data={expenses}
@@ -392,7 +400,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
             onRefresh={handleRefresh}
             tintColor={COLORS.accent}
             colors={[COLORS.accent]}
-            progressBackgroundColor={COLORS.bgElevated}
+            progressBackgroundColor="#111111"
           />
         }
       />
@@ -411,26 +419,43 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: '#050505' },
   listContent: { paddingBottom: 40 },
 
   // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: SPACING.xxl,
     paddingTop: SPACING.lg,
-    paddingBottom: SPACING.sm,
+    paddingBottom: SPACING.md,
   },
-  greeting: {
-    ...TYPOGRAPHY.h1,
-    color: COLORS.textPrimary,
-    marginBottom: 2,
+  headerTitleWrap: {
+    flexDirection: 'column',
   },
-  dateText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+  brandTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 6,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF4500',
+  },
+  statusText: {
+    fontSize: 10,
+    color: '#888888',
+    letterSpacing: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -438,56 +463,93 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   settingsBtn: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.bgElevated,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#111111',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   syncIndicator: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: COLORS.accentBg,
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 69, 0, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   syncBadge: {
-    minWidth: 24, height: 24, borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: COLORS.warningBg,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 7,
-    borderWidth: 1, borderColor: COLORS.warningBorder,
+    borderWidth: 1,
+    borderColor: COLORS.warningBorder,
   },
   syncBadgeText: {
     color: COLORS.warning,
-    fontSize: 11, fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '800',
   },
 
-  // Hero Section
+  // Hero Card 1 - Red / Flame Aesthetic (#FF4500)
   heroSection: {
     marginHorizontal: SPACING.xxl,
     paddingVertical: SPACING.xl,
     paddingHorizontal: SPACING.xl,
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: RADIUS.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
+    backgroundColor: '#FF4500',
+    borderRadius: 24,
+    marginBottom: SPACING.lg,
+    marginTop: SPACING.xs,
+    shadowColor: '#FF4500',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  heroLabel: {
-    ...TYPOGRAPHY.labelSm,
-    color: COLORS.textMuted,
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.xs,
   },
+  heroLabel: {
+    fontSize: 11,
+    color: '#000000',
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  heroPillBadge: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.25)',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  heroPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#000000',
+  },
   heroAmount: {
-    ...TYPOGRAPHY.displayLg,
-    color: COLORS.textPrimary,
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#000000',
     fontVariant: ['tabular-nums'],
     marginBottom: SPACING.lg,
+    letterSpacing: -1,
   },
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.15)',
     paddingTop: SPACING.md,
   },
   metricItem: {
@@ -495,40 +557,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 32,
-    backgroundColor: COLORS.border,
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
   },
   metricLabel: {
-    ...TYPOGRAPHY.labelXs,
-    color: COLORS.textMuted,
+    fontSize: 9,
+    color: 'rgba(0, 0, 0, 0.65)',
+    fontWeight: '700',
     marginBottom: 4,
   },
   metricValue: {
-    ...TYPOGRAPHY.mono,
-    color: COLORS.textPrimary,
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '800',
   },
 
-  // Budget bar
-  budgetBar: {
+  // Budget Card (Card 2 Aesthetic - #111111)
+  budgetCard: {
     marginHorizontal: SPACING.xxl,
+    padding: SPACING.lg,
+    backgroundColor: '#111111',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: SPACING.md,
   },
+  budgetCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  budgetCardTitle: {
+    fontSize: 10,
+    color: '#888888',
+    letterSpacing: 1.2,
+  },
+  budgetPillBadge: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  budgetPillText: {
+    fontSize: 10,
+    color: '#888888',
+  },
   budgetBarTrack: {
-    height: 3,
-    backgroundColor: COLORS.bgSurface,
+    height: 4,
+    backgroundColor: '#181818',
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 5,
+    marginBottom: 6,
   },
   budgetBarFill: {
     height: '100%',
-    backgroundColor: COLORS.accent,
+    backgroundColor: '#FF4500',
     borderRadius: 2,
   },
   budgetBarLabel: {
-    ...TYPOGRAPHY.labelXs,
-    color: COLORS.textMuted,
+    fontSize: 11,
+    color: '#888888',
   },
 
   // Spending Score
@@ -538,31 +629,36 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.xxl,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
+    backgroundColor: '#111111',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: SPACING.md,
     gap: SPACING.md,
   },
   scoreCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.accentBg,
-    borderWidth: 2, borderColor: COLORS.accent,
-    justifyContent: 'center', alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 69, 0, 0.15)',
+    borderWidth: 2,
+    borderColor: '#FF4500',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scoreValue: {
-    ...TYPOGRAPHY.monoLg,
-    color: COLORS.accent,
+    fontSize: 16,
+    color: '#FF4500',
+    fontWeight: '800',
   },
   scoreInfo: { flex: 1 },
   scoreTitle: {
-    ...TYPOGRAPHY.label,
-    color: COLORS.textPrimary,
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   scoreLabel: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    fontSize: 12,
+    color: '#888888',
     marginTop: 1,
   },
 
@@ -571,41 +667,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: SPACING.xxl,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
     marginBottom: SPACING.md,
   },
   weekChipText: {
-    ...TYPOGRAPHY.labelSm,
+    fontSize: 12,
   },
 
-  // Quick Log CTA
+  // Quick Log CTA - Full width high contrast rounded button
   quickLogBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: SPACING.xxl,
-    backgroundColor: COLORS.accentBg,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.borderAccent,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.pill,
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.xl,
     marginBottom: SPACING.xl,
     gap: SPACING.md,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   quickLogIconWrap: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.accentStrong,
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF4500',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quickLogTextWrap: { flex: 1 },
   quickLogTitle: {
-    ...TYPOGRAPHY.label,
-    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
   },
   quickLogSub: {
-    ...TYPOGRAPHY.labelSm,
-    color: COLORS.textMuted,
+    fontSize: 11,
+    color: '#444444',
     marginTop: 1,
   },
 
@@ -618,37 +722,50 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.overline,
-    color: COLORS.textMuted,
+    fontSize: 11,
+    color: '#888888',
+    letterSpacing: 1.5,
   },
   sectionCount: {
-    ...TYPOGRAPHY.labelSm,
-    color: COLORS.textMuted,
+    fontSize: 12,
+    color: '#888888',
   },
 
-  // Transaction rows
+  // Transaction rows - Editorial dark card aesthetic (#111111)
   txRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.xxl,
+    marginHorizontal: SPACING.xxl,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
+    backgroundColor: '#111111',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     gap: SPACING.md,
   },
   txIconWrap: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    justifyContent: 'center', alignItems: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   txIcon: { fontSize: 18 },
   txDetails: { flex: 1 },
   txLabel: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textPrimary,
+    fontSize: 15,
+    color: '#FFFFFF',
     fontWeight: '600',
     marginBottom: 2,
   },
   txSub: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.textSecondary,
+    fontSize: 12,
+    color: '#888888',
   },
   txMeta: {
     flexDirection: 'row',
@@ -656,17 +773,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   txDate: {
-    ...TYPOGRAPHY.labelSm,
-    color: COLORS.textMuted,
+    fontSize: 11,
+    color: '#666666',
   },
   syncDotPending: {
-    width: 5, height: 5, borderRadius: 2.5,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: COLORS.warning,
     marginLeft: 6,
   },
   txAmount: {
-    ...TYPOGRAPHY.mono,
-    color: COLORS.textPrimary,
+    fontSize: 16,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 
@@ -679,13 +798,13 @@ const styles = StyleSheet.create({
   },
   emptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
   emptyTitle: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.textPrimary,
+    fontSize: 18,
+    color: '#FFFFFF',
     marginBottom: SPACING.sm,
   },
   emptySub: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    fontSize: 13,
+    color: '#888888',
     textAlign: 'center',
     lineHeight: 20,
   },

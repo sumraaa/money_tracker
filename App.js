@@ -149,7 +149,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+        <StatusBar barStyle="light-content" backgroundColor="#050505" />
         <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
           <View style={styles.screenArea}>{renderScreen()}</View>
           {!hideTabBar && (
@@ -166,13 +166,13 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#050505',
   },
   screenArea: {
     flex: 1,
   },
   tabBarSafeArea: {
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#050505',
   },
   loadingContainer: {
     flex: 1,
