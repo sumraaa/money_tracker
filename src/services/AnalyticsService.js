@@ -19,11 +19,15 @@ import {
 } from '../database/db';
 import {
   startOfToday,
+  endOfToday,
   startOfWeek,
+  endOfWeek,
   startOfMonth,
+  endOfMonth,
   startOfLastMonth,
   endOfLastMonth,
   startOfYear,
+  endOfYear,
   daysAgo,
   daysBetween,
   daysRemainingInMonth,
@@ -34,29 +38,23 @@ import { sumAmounts, safePercent, formatINR, toPaise, toRupees } from '../utils/
 // ─── Core Spending Queries ──────────────────────────────────────
 
 export async function getTodaySpend() {
-  const start = startOfToday().toISOString();
-  return getTotalSpending(start);
+  return getTotalSpending(startOfToday().toISOString(), endOfToday().toISOString());
 }
 
 export async function getWeekSpend() {
-  const start = startOfWeek().toISOString();
-  return getTotalSpending(start);
+  return getTotalSpending(startOfWeek().toISOString(), endOfWeek().toISOString());
 }
 
 export async function getMonthSpend() {
-  const start = startOfMonth().toISOString();
-  return getTotalSpending(start);
+  return getTotalSpending(startOfMonth().toISOString(), endOfMonth().toISOString());
 }
 
 export async function getLastMonthSpend() {
-  const start = startOfLastMonth().toISOString();
-  const end = endOfLastMonth().toISOString();
-  return getTotalSpending(start, end);
+  return getTotalSpending(startOfLastMonth().toISOString(), endOfLastMonth().toISOString());
 }
 
 export async function getYearSpend() {
-  const start = startOfYear().toISOString();
-  return getTotalSpending(start);
+  return getTotalSpending(startOfYear().toISOString(), endOfYear().toISOString());
 }
 
 export async function getLastWeekSpend() {

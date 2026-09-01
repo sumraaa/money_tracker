@@ -56,6 +56,15 @@ export function startOfToday() {
 }
 
 /**
+ * Get end of today (23:59:59.999 local time).
+ */
+export function endOfToday() {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+/**
  * Get start of a given date (midnight local time).
  */
 export function startOfDay(date) {
@@ -65,7 +74,7 @@ export function startOfDay(date) {
 }
 
 /**
- * Get start of the current week (Monday).
+ * Get start of the current week (Monday midnight).
  */
 export function startOfWeek() {
   const d = new Date();
@@ -77,12 +86,33 @@ export function startOfWeek() {
 }
 
 /**
- * Get start of the current month.
+ * Get end of the current week (Sunday 23:59:59.999).
+ */
+export function endOfWeek() {
+  const d = startOfWeek();
+  d.setDate(d.getDate() + 6);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+/**
+ * Get start of the current month (1st day midnight).
  */
 export function startOfMonth() {
   const d = new Date();
   d.setDate(1);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Get end of the current month (last day 23:59:59.999).
+ */
+export function endOfMonth() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(0);
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 
@@ -115,6 +145,17 @@ export function startOfYear() {
   d.setMonth(0);
   d.setDate(1);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Get end of the current year (Dec 31 23:59:59.999).
+ */
+export function endOfYear() {
+  const d = new Date();
+  d.setMonth(11);
+  d.setDate(31);
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 

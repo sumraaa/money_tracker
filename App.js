@@ -11,11 +11,17 @@ import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import RecurringScreen from './src/screens/RecurringScreen';
+import { emit, EventTypes } from './src/services/EventBus';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from './src/constants/theme';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [showSettings, setShowSettings] = useState(false);
+
+  const handleTabPress = (tab) => {
+    setActiveTab(tab);
+    emit(EventTypes.TAB_CHANGED, tab);
+  };
   const [showRecurring, setShowRecurring] = useState(false);
   const [globalQuickLog, setGlobalQuickLog] = useState(false);
   const [syncStatus, setSyncStatus] = useState({
@@ -162,7 +168,7 @@ export default function App() {
           {!hideTabBar && (
             <CustomTabBar
               activeTab={activeTab}
-              onTabPress={setActiveTab}
+              onTabPress={handleTabPress}
               onQuickLogPress={() => setGlobalQuickLog(true)}
             />
           )}

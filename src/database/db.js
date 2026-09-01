@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from '../utils/dates';
 
 const DB_NAME = 'zero_friction_expenses.db';
 
@@ -589,34 +590,35 @@ export const getRecentMerchants = async (limit = 10) => {
 export const getExpensesByTimeframe = async (timeframe = 'week') => {
   try {
     const db = await getDb();
-    const now = new Date();
     let startDate;
+    let endDate;
 
     if (timeframe === 'week') {
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - 6);
+      startDate = startOfWeek();
+      endDate = endOfWeek();
     } else if (timeframe === 'month') {
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - 29);
+      startDate = startOfMonth();
+      endDate = endOfMonth();
     } else {
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - 364);
+      startDate = startOfYear();
+      endDate = endOfYear();
     }
 
     const startIso = startDate.toISOString();
+    const endIso = endDate.toISOString();
 
     const expenses = await db.getAllAsync(
-      `SELECT * FROM expenses WHERE date_time >= ? ORDER BY date_time DESC;`,
-      [startIso]
+      `SELECT * FROM expenses WHERE date_time >= ? AND date_time <= ? ORDER BY date_time DESC;`,
+      [startIso, endIso]
     );
 
     const aggregated = await db.getAllAsync(
       `SELECT substr(date_time, 1, 10) AS day, SUM(expense) AS total
        FROM expenses
-       WHERE date_time >= ?
+       WHERE date_time >= ? AND date_time <= ?
        GROUP BY day
        ORDER BY day ASC;`,
-      [startIso]
+      [startIso, endIso]
     );
 
     const chartMap = {};
@@ -625,26 +627,53 @@ export const getExpensesByTimeframe = async (timeframe = 'week') => {
     });
 
     const chartData = [];
-    const cursor = new Date(startDate);
-    cursor.setHours(0, 0, 0, 0);
 
-    while (cursor <= now) {
-      const dayKey = cursor.toISOString().slice(0, 10);
-      chartData.push({
-        day: dayKey,
-        value: chartMap[dayKey] ? parseFloat(chartMap[dayKey].toFixed(2)) : 0,
-        label:
-          timeframe === 'week'
-            ? cursor.toLocaleDateString('en-IN', { weekday: 'short' })
-            : timeframe === 'month'
-            ? cursor.getDate() % 5 === 1 || cursor.getDate() === 1
-              ? cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-              : ''
-            : cursor.getDate() === 1
-            ? cursor.toLocaleDateString('en-IN', { month: 'short' })
-            : '',
+    if (timeframe === 'year') {
+      const monthTotals = {};
+      (expenses || []).forEach((e) => {
+        const d = new Date(e.date_time);
+        const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthTotals[mKey] = (monthTotals[mKey] || 0) + (parseFloat(e.expense) || 0);
       });
-      cursor.setDate(cursor.getDate() + 1);
+
+      for (let m = 0; m < 12; m++) {
+        const d = new Date(startDate.getFullYear(), m, 1);
+        const mKey = `${d.getFullYear()}-${String(m + 1).padStart(2, '0')}`;
+        const val = monthTotals[mKey] ? parseFloat(monthTotals[mKey].toFixed(2)) : 0;
+        chartData.push({
+          day: mKey,
+          value: val,
+          label: d.toLocaleDateString('en-IN', { month: 'short' }),
+        });
+      }
+    } else {
+      const cursor = new Date(startDate);
+      cursor.setHours(0, 0, 0, 0);
+
+      while (cursor <= endDate) {
+        const y = cursor.getFullYear();
+        const m = String(cursor.getMonth() + 1).padStart(2, '0');
+        const d = String(cursor.getDate()).padStart(2, '0');
+        const dayKey = `${y}-${m}-${d}`;
+
+        let label = '';
+        if (timeframe === 'week') {
+          label = cursor.toLocaleDateString('en-IN', { weekday: 'short' });
+        } else {
+          if (cursor.getDate() % 5 === 1 || cursor.getDate() === 1) {
+            label = `${cursor.getDate()} ${cursor.toLocaleDateString('en-IN', { month: 'short' })}`;
+          }
+        }
+
+        const val = chartMap[dayKey] ? parseFloat(chartMap[dayKey].toFixed(2)) : 0;
+        chartData.push({
+          day: dayKey,
+          value: val,
+          label,
+        });
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
     }
 
     return { chartData, expenses: expenses || [] };

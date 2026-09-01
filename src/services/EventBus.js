@@ -15,6 +15,7 @@ export const EventTypes = {
   BUDGET_CHANGED: 'BUDGET_CHANGED',
   SETTINGS_CHANGED: 'SETTINGS_CHANGED',
   DATA_IMPORTED: 'DATA_IMPORTED',
+  TAB_CHANGED: 'TAB_CHANGED',
 };
 
 export function emit(event, data) {

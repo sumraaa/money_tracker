@@ -104,6 +104,9 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
     const unsub3 = on(EventTypes.SYNC_COMPLETED, loadData);
     const unsub4 = on(EventTypes.EXPENSE_CREATED, loadData);
     const unsub5 = on(EventTypes.EXPENSE_UPDATED, loadData);
+    const unsub6 = on(EventTypes.TAB_CHANGED, (targetTab) => {
+      if (targetTab === 'home') loadData();
+    });
 
     return () => {
       subscription.remove();
@@ -112,6 +115,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       unsub3();
       unsub4();
       unsub5();
+      unsub6();
     };
   }, []);
 
@@ -302,22 +306,6 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
         </View>
       </View>
 
-      {/* Quick Log Action CTA */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.quickLogCTA}
-        onPress={openLog}
-      >
-        <View style={styles.quickLogIconWrap}>
-          <Plus size={22} color="#ffffff" strokeWidth={2.5} />
-        </View>
-        <View style={styles.quickLogTextWrap}>
-          <Text style={styles.quickLogTitle}>Quick Log Expense</Text>
-          <Text style={styles.quickLogSub}>Record a transaction instantly</Text>
-        </View>
-        <ChevronRight size={20} color="#171e19" />
-      </TouchableOpacity>
-
       {/* Recent Activity Header */}
       {expenses.length > 0 && (
         <View style={styles.sectionHeader}>
@@ -380,7 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eeebe3',
   },
   listContent: {
-    paddingBottom: 110,
+    paddingBottom: 140,
   },
 
   // Header & Greeting

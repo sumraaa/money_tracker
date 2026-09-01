@@ -1,10 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, BarChart2, Plus, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, ANIMATION } from '../constants/theme';
 
 export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress }) {
+  const insets = useSafeAreaInsets();
+  const bottomMargin = Math.max(16, insets.bottom + 8);
+
   const homeScale = useRef(new Animated.Value(1)).current;
   const analyticsScale = useRef(new Animated.Value(1)).current;
   const historyScale = useRef(new Animated.Value(1)).current;
@@ -48,7 +52,7 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
   };
 
   return (
-    <View style={styles.floatingContainer}>
+    <View style={[styles.floatingContainer, { bottom: bottomMargin }]}>
       {/* Home Tab */}
       <TouchableOpacity
         activeOpacity={0.7}
@@ -129,12 +133,11 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
 const styles = StyleSheet.create({
   floatingContainer: {
     position: 'absolute',
-    bottom: 16,
     left: 20,
     right: 20,
-    height: 68,
+    height: 64,
     backgroundColor: '#171e19',
-    borderRadius: 36,
+    borderRadius: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -162,16 +165,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   fabSlot: {
-    width: 58,
+    width: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
   centerFab: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#ca0013',
-    transform: [{ translateY: -22 }],
+    transform: [{ translateY: -20 }],
     borderWidth: 4,
     borderColor: '#eeebe3',
     alignItems: 'center',

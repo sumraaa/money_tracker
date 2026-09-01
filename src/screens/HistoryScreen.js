@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { getAllExpenses, deleteExpense, updateExpense } from '../database/db';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY, DEFAULT_CATEGORIES, PAYMENT_METHODS } from '../constants/theme';
 import { formatINR } from '../utils/money';
-import { formatShortDate, formatTime, startOfToday, startOfWeek, startOfMonth, startOfLastMonth, endOfLastMonth, startOfYear, daysAgo } from '../utils/dates';
+import { formatShortDate, formatTime, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfLastMonth, endOfLastMonth, startOfYear, endOfYear, daysAgo } from '../utils/dates';
 import { emit, on, EventTypes } from '../services/EventBus';
 
 const PERIODS = [
@@ -39,16 +39,16 @@ function getCategoryColor(name) {
 
 function getPeriodDates(periodId) {
   switch (periodId) {
-    case 'today': return { startDate: startOfToday().toISOString() };
+    case 'today': return { startDate: startOfToday().toISOString(), endDate: endOfToday().toISOString() };
     case 'yesterday': {
       const s = daysAgo(1); s.setHours(0,0,0,0);
       const e = new Date(s); e.setHours(23,59,59,999);
       return { startDate: s.toISOString(), endDate: e.toISOString() };
     }
-    case 'week': return { startDate: startOfWeek().toISOString() };
-    case 'month': return { startDate: startOfMonth().toISOString() };
+    case 'week': return { startDate: startOfWeek().toISOString(), endDate: endOfWeek().toISOString() };
+    case 'month': return { startDate: startOfMonth().toISOString(), endDate: endOfMonth().toISOString() };
     case 'lastMonth': return { startDate: startOfLastMonth().toISOString(), endDate: endOfLastMonth().toISOString() };
-    case 'year': return { startDate: startOfYear().toISOString() };
+    case 'year': return { startDate: startOfYear().toISOString(), endDate: endOfYear().toISOString() };
     case 'all': default: return {};
   }
 }
@@ -84,8 +84,11 @@ export default function HistoryScreen({ onDataChanged }) {
     const unsub2 = on(EventTypes.EXPENSE_UPDATED, loadData);
     const unsub3 = on(EventTypes.EXPENSE_DELETED, loadData);
     const unsub4 = on(EventTypes.SYNC_COMPLETED, loadData);
+    const unsub5 = on(EventTypes.TAB_CHANGED, (targetTab) => {
+      if (targetTab === 'history') loadData();
+    });
     return () => {
-      unsub1(); unsub2(); unsub3(); unsub4();
+      unsub1(); unsub2(); unsub3(); unsub4(); unsub5();
     };
   }, [loadData]);
 
@@ -210,18 +213,22 @@ export default function HistoryScreen({ onDataChanged }) {
       )}
 
       {/* Timeframe Chips */}
-      <FlatList
-        horizontal data={PERIODS} keyExtractor={(p) => p.id}
-        showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodRow}
-        renderItem={({ item: p }) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodRow}
+      >
+        {PERIODS.map((p) => (
           <TouchableOpacity
+            key={p.id}
+            activeOpacity={0.7}
             style={[styles.periodChip, period === p.id && styles.periodChipActive]}
             onPress={() => { Haptics.selectionAsync(); setPeriod(p.id); }}
           >
             <Text style={[styles.periodText, period === p.id && styles.periodTextActive]}>{p.label}</Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* Summary Card */}
       <View style={styles.summaryRow}>
@@ -352,26 +359,36 @@ const styles = StyleSheet.create({
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
 
-  searchRow: { paddingHorizontal: SPACING.xxl, marginBottom: SPACING.sm },
+  searchRow: { paddingHorizontal: 20, marginBottom: SPACING.sm },
   searchInput: {
     backgroundColor: '#ffffff', color: '#171e19', borderRadius: RADIUS.pill,
     paddingHorizontal: SPACING.lg, paddingVertical: 12, fontSize: 14, fontWeight: '600',
     borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
 
-  periodRow: { paddingHorizontal: SPACING.xxl, paddingVertical: SPACING.xs, gap: 8 },
+  periodRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
   periodChip: {
-    paddingHorizontal: SPACING.lg, paddingVertical: 8, borderRadius: RADIUS.pill,
-    backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    height: 38,
+    paddingHorizontal: 16,
+    borderRadius: 19,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(183, 198, 194, 0.35)',
   },
   periodChipActive: { backgroundColor: '#171e19', borderColor: '#171e19' },
-  periodText: { fontSize: 12, color: '#6c7772', fontWeight: '600' },
-  periodTextActive: { color: '#ffffff', fontWeight: '800' },
+  periodText: { fontSize: 13, color: '#6c7772', fontWeight: '700' },
+  periodTextActive: { color: '#ffffff', fontWeight: '700' },
 
   summaryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, marginHorizontal: SPACING.xxl,
-    marginVertical: SPACING.sm, backgroundColor: '#ffffff', borderRadius: 24,
+    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, marginHorizontal: 20,
+    marginVertical: SPACING.xs, backgroundColor: '#ffffff', borderRadius: 24,
     borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
   },
@@ -383,7 +400,7 @@ const styles = StyleSheet.create({
   },
   sortLabel: { fontSize: 12, color: '#ca0013', fontWeight: '700' },
 
-  filterRow: { paddingHorizontal: SPACING.xxl, marginBottom: SPACING.md },
+  filterRow: { paddingHorizontal: 20, marginBottom: SPACING.md },
   filterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(202, 0, 19, 0.1)', paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(202, 0, 19, 0.3)' },
   filterText: { fontSize: 12, color: '#ca0013', fontWeight: '700' },
 
@@ -391,13 +408,13 @@ const styles = StyleSheet.create({
 
   dateHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: SPACING.xxl, paddingTop: SPACING.lg, paddingBottom: SPACING.xs,
+    paddingHorizontal: 0, paddingTop: SPACING.lg, paddingBottom: SPACING.xs,
   },
   dateHeaderText: { fontSize: 11, color: '#6c7772', fontWeight: '800', letterSpacing: 1.5 },
   dateHeaderTotal: { fontSize: 12, color: '#6c7772', fontWeight: '700' },
 
   txRow: {
-    flexDirection: 'row', alignItems: 'center', marginHorizontal: SPACING.xxl, marginBottom: SPACING.md,
+    flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md,
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, backgroundColor: '#ffffff',
     borderRadius: 24, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', gap: SPACING.md,
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
@@ -415,7 +432,7 @@ const styles = StyleSheet.create({
   syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.warning, marginLeft: 6 },
   txAmount: { fontSize: 16, color: '#171e19', fontWeight: '800' },
 
-  listContent: { paddingBottom: 110 },
+  listContent: { paddingBottom: 140, paddingHorizontal: 20 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingHorizontal: SPACING.xxxl },
   emptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
   emptyTitle: { fontSize: 18, color: '#171e19', fontWeight: '700', marginBottom: SPACING.xs },

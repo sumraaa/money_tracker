@@ -71,8 +71,11 @@ export default function AnalyticsScreen() {
     const unsub2 = on(EventTypes.EXPENSE_UPDATED, () => loadData(timeframe));
     const unsub3 = on(EventTypes.EXPENSE_DELETED, () => loadData(timeframe));
     const unsub4 = on(EventTypes.BUDGET_CHANGED, () => loadData(timeframe));
+    const unsub5 = on(EventTypes.TAB_CHANGED, (targetTab) => {
+      if (targetTab === 'analytics') loadData(timeframe);
+    });
     return () => {
-      unsub1(); unsub2(); unsub3(); unsub4();
+      unsub1(); unsub2(); unsub3(); unsub4(); unsub5();
     };
   }, [timeframe]);
 
@@ -328,7 +331,7 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#eeebe3' },
-  content: { paddingHorizontal: SPACING.xxl, paddingTop: SPACING.xl, paddingBottom: 110 },
+  content: { paddingHorizontal: SPACING.xxl, paddingTop: SPACING.xl, paddingBottom: 140 },
 
   header: { marginBottom: SPACING.md },
   screenTitle: { fontSize: 32, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
