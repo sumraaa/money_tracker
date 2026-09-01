@@ -5,6 +5,7 @@ import { initDatabase } from './src/database/db';
 import { initSyncManager, subscribeSyncState } from './src/services/SyncService';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import CustomTabBar from './src/components/CustomTabBar';
+import QuickLogModal from './src/components/QuickLogModal';
 import HomeScreen from './src/screens/HomeScreen';
 import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
@@ -16,6 +17,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [showSettings, setShowSettings] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [globalQuickLog, setGlobalQuickLog] = useState(false);
   const [syncStatus, setSyncStatus] = useState({
     isSyncing: false,
     isOnline: true,
@@ -56,6 +58,10 @@ export default function App() {
 
     // Android Hardware Back Button Handling
     const onBackPress = () => {
+      if (globalQuickLog) {
+        setGlobalQuickLog(false);
+        return true;
+      }
       if (showRecurring) {
         setShowRecurring(false);
         return true;
@@ -77,7 +83,7 @@ export default function App() {
       unsubscribeSync();
       backHandler.remove();
     };
-  }, [showRecurring, showSettings, activeTab, startDbInit]);
+  }, [showRecurring, showSettings, activeTab, globalQuickLog, startDbInit]);
 
   const handleExpenseAdded = () => {
     setRefreshToken((t) => t + 1);
@@ -100,7 +106,7 @@ export default function App() {
     if (!dbReady) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.accent} />
+          <ActivityIndicator size="large" color={COLORS.accentRed} />
           <Text style={styles.loadingText}>Zero Friction</Text>
         </View>
       );
@@ -128,6 +134,7 @@ export default function App() {
             syncStatus={syncStatus}
             onExpenseAdded={handleExpenseAdded}
             onOpenSettings={() => setShowSettings(true)}
+            onOpenQuickLog={() => setGlobalQuickLog(true)}
           />
         );
       case 'analytics':
@@ -149,14 +156,21 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#050505" />
+        <StatusBar barStyle="dark-content" backgroundColor="#eeebe3" />
         <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
           <View style={styles.screenArea}>{renderScreen()}</View>
           {!hideTabBar && (
-            <SafeAreaView edges={['bottom']} style={styles.tabBarSafeArea}>
-              <CustomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
-            </SafeAreaView>
+            <CustomTabBar
+              activeTab={activeTab}
+              onTabPress={setActiveTab}
+              onQuickLogPress={() => setGlobalQuickLog(true)}
+            />
           )}
+          <QuickLogModal
+            visible={globalQuickLog}
+            onClose={() => setGlobalQuickLog(false)}
+            onExpenseAdded={handleExpenseAdded}
+          />
         </SafeAreaView>
       </SafeAreaProvider>
     </ErrorBoundary>
@@ -166,31 +180,29 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#050505',
+    backgroundColor: '#eeebe3',
   },
   screenArea: {
     flex: 1,
-  },
-  tabBarSafeArea: {
-    backgroundColor: '#050505',
+    backgroundColor: '#eeebe3',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#eeebe3',
     alignItems: 'center',
-    justify: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
     ...TYPOGRAPHY.h3,
-    color: COLORS.textPrimary,
+    color: '#171e19',
     marginTop: SPACING.md,
     letterSpacing: 1,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#eeebe3',
     alignItems: 'center',
-    justify: 'center',
+    justifyContent: 'center',
     padding: SPACING.xxl,
   },
   errorIcon: {
@@ -211,14 +223,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   retryBtn: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentRed,
     paddingHorizontal: SPACING.xxl,
     paddingVertical: SPACING.lg,
     borderRadius: RADIUS.pill,
   },
   retryText: {
     ...TYPOGRAPHY.label,
-    color: COLORS.textPrimary,
+    color: '#ffffff',
     fontWeight: '700',
   },
 });
+

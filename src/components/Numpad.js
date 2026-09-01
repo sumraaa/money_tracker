@@ -51,7 +51,7 @@ export default function Numpad({ value, onChange }) {
           {row.map((key) => (
             <TouchableOpacity
               key={key}
-              activeOpacity={0.5}
+              activeOpacity={0.6}
               style={[
                 styles.button,
                 key === '⌫' && styles.deleteButton,
@@ -78,36 +78,43 @@ const styles = StyleSheet.create({
   grid: {
     width: '100%',
     paddingHorizontal: SPACING.xs,
-    marginVertical: SPACING.md,
+    marginVertical: SPACING.sm,
   },
   row: {
     flexDirection: 'row',
-    justify: 'space-between',
-    marginBottom: SPACING.xs,
-    gap: SPACING.xs,
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
   },
   button: {
     flex: 1,
-    height: 56,
+    height: 54,
     borderRadius: 16,
-    backgroundColor: '#111111',
-    justify: 'center',
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(183, 198, 194, 0.35)',
+    shadowColor: '#171e19',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   deleteButton: {
-    backgroundColor: '#181818',
-    borderColor: 'rgba(255, 69, 0, 0.3)',
+    backgroundColor: '#ffffff',
+    borderColor: 'rgba(202, 0, 19, 0.3)',
   },
   keyText: {
     fontFamily: TYPOGRAPHY.mono.fontFamily,
-    color: '#FFFFFF',
+    color: '#171e19',
     fontSize: 22,
     fontWeight: '700',
   },
   deleteKeyText: {
-    color: '#FF4500',
+    color: '#ca0013',
     fontSize: 20,
+    fontWeight: '700',
   },
 });
+

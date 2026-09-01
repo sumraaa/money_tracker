@@ -126,34 +126,18 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
   const SettingRow = ({ icon, label, value, onPress, danger, showChevron = true }) => (
     <TouchableOpacity
       style={styles.settingRow}
-      activeOpacity={0.6}
+      activeOpacity={0.7}
       onPress={onPress}
     >
       <View style={[styles.settingIconWrap, danger && styles.settingIconDanger]}>
         {icon}
       </View>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, danger && { color: COLORS.error }]}>{label}</Text>
+        <Text style={[styles.settingLabel, danger && { color: '#ca0013' }]}>{label}</Text>
         {value ? <Text style={styles.settingValue} numberOfLines={1}>{value}</Text> : null}
       </View>
-      {showChevron && <ChevronRight size={16} color={COLORS.textDisabled} />}
+      {showChevron && <ChevronRight size={16} color="#6c7772" />}
     </TouchableOpacity>
-  );
-
-  const ToggleRow = ({ icon, label, sub, value, onToggle }) => (
-    <View style={styles.settingRow}>
-      <View style={styles.settingIconWrap}>{icon}</View>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingLabel}>{label}</Text>
-        {sub ? <Text style={styles.settingValue}>{sub}</Text> : null}
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: COLORS.bgSurface, true: COLORS.accentStrong }}
-        thumbColor={COLORS.textPrimary}
-      />
-    </View>
   );
 
   return (
@@ -161,10 +145,10 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <ArrowLeft size={20} color={COLORS.textPrimary} />
+          <ArrowLeft size={20} color="#171e19" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
@@ -176,14 +160,14 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <Text style={styles.sectionLabel}>SYNC</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Cloud size={18} color={COLORS.accent} />}
+            icon={<Cloud size={18} color="#ca0013" />}
             label="Google Sheets URL"
             value={scriptUrl && !scriptUrl.includes('YOUR_GOOGLE') ? 'Configured' : 'Not set'}
             onPress={() => setShowSyncModal(true)}
           />
           <View style={styles.divider} />
           <SettingRow
-            icon={<Database size={18} color={COLORS.info} />}
+            icon={<Database size={18} color="#171e19" />}
             label="Sync now"
             value={unsyncedCount > 0 ? `${unsyncedCount} pending` : 'All synced'}
             onPress={handleSync}
@@ -194,7 +178,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <Text style={styles.sectionLabel}>SUBSCRIPTIONS & BILLS</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Repeat size={18} color={COLORS.accent} />}
+            icon={<Repeat size={18} color="#ca0013" />}
             label="Subscriptions & Recurring Expenses"
             value="Netflix, Rent, Broadband, Gym"
             onPress={onOpenRecurring}
@@ -205,7 +189,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <Text style={styles.sectionLabel}>BUDGET</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Wallet size={18} color={COLORS.success} />}
+            icon={<Wallet size={18} color="#171e19" />}
             label="Monthly budget"
             value={currentBudget?.hasOverallBudget
               ? formatINR(currentBudget.overallBudget, { showPaise: false })
@@ -221,7 +205,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
             <>
               <View style={styles.divider} />
               <SettingRow
-                icon={<Trash2 size={18} color={COLORS.error} />}
+                icon={<Trash2 size={18} color="#ca0013" />}
                 label="Remove budget"
                 onPress={handleRemoveBudget}
                 danger
@@ -234,14 +218,14 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <Text style={styles.sectionLabel}>DATA & BACKUP</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Download size={18} color={COLORS.accent} />}
+            icon={<Download size={18} color="#ca0013" />}
             label="Export as CSV"
             value="Share expense data"
             onPress={() => handleExport('csv')}
           />
           <View style={styles.divider} />
           <SettingRow
-            icon={<Download size={18} color={COLORS.accent} />}
+            icon={<Download size={18} color="#ca0013" />}
             label="Export as JSON"
             value="Full data backup"
             onPress={() => handleExport('json')}
@@ -252,14 +236,14 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <Text style={styles.sectionLabel}>ABOUT</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Info size={18} color={COLORS.textMuted} />}
+            icon={<Info size={18} color="#6c7772" />}
             label="Zero Friction"
             value="v1.0.0 • Offline Personal Financial OS"
             showChevron={false}
           />
           <View style={styles.divider} />
           <SettingRow
-            icon={<Shield size={18} color={COLORS.textMuted} />}
+            icon={<Shield size={18} color="#6c7772" />}
             label="Privacy"
             value="All data stored locally on device"
             showChevron={false}
@@ -288,7 +272,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
             <TextInput
               style={styles.modalInput}
               placeholder="https://script.google.com/macros/s/.../exec"
-              placeholderTextColor={COLORS.textDisabled}
+              placeholderTextColor="#6c7772"
               value={scriptUrl}
               onChangeText={setUrl}
               autoCapitalize="none"
@@ -328,7 +312,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
               <TextInput
                 style={styles.budgetInput}
                 placeholder="10000"
-                placeholderTextColor={COLORS.textDisabled}
+                placeholderTextColor="#6c7772"
                 value={budgetAmount}
                 onChangeText={setBudgetAmount}
                 keyboardType="numeric"
@@ -354,67 +338,70 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: '#eeebe3' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.md,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.bgElevated,
-    justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  headerTitle: { ...TYPOGRAPHY.h1, color: COLORS.textPrimary },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 110 },
 
   sectionLabel: {
-    ...TYPOGRAPHY.overline, color: COLORS.textMuted,
+    fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5,
     marginTop: SPACING.xxl, marginBottom: SPACING.sm, paddingHorizontal: SPACING.xs,
   },
   sectionCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, overflow: 'hidden',
+    backgroundColor: '#ffffff', borderRadius: 24,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', overflow: 'hidden',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLORS.border, marginLeft: 56 },
+  divider: { height: 1, backgroundColor: '#eeebe3', marginLeft: 56 },
 
   settingRow: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.lg, gap: SPACING.md, minHeight: 56,
   },
   settingIconWrap: {
-    width: 32, height: 32, borderRadius: RADIUS.sm, backgroundColor: COLORS.bgSurface,
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#eeebe3',
     justifyContent: 'center', alignItems: 'center',
   },
-  settingIconDanger: { backgroundColor: COLORS.errorBg },
+  settingIconDanger: { backgroundColor: 'rgba(202, 0, 19, 0.1)' },
   settingContent: { flex: 1 },
-  settingLabel: { ...TYPOGRAPHY.body, color: COLORS.textPrimary, fontWeight: '500' },
-  settingValue: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, marginTop: 1 },
+  settingLabel: { fontSize: 15, color: '#171e19', fontWeight: '700' },
+  settingValue: { fontSize: 13, color: '#6c7772', marginTop: 1 },
 
   footer: {
-    ...TYPOGRAPHY.bodySm, color: COLORS.textDisabled, textAlign: 'center',
-    marginTop: SPACING.xxxl, lineHeight: 20,
+    fontSize: 12, color: '#8a9691', textAlign: 'center',
+    marginTop: SPACING.xxxl, lineHeight: 18, fontWeight: '500',
   },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: SPACING.xxl },
-  modalBox: { backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xxl, borderWidth: 1, borderColor: COLORS.borderStrong },
-  modalTitle: { ...TYPOGRAPHY.h2, color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  modalDesc: { ...TYPOGRAPHY.bodySm, color: COLORS.textSecondary, lineHeight: 20, marginBottom: SPACING.lg },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(23, 30, 25, 0.65)', justifyContent: 'center', padding: SPACING.xxl },
+  modalBox: { backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xxl, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)' },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#171e19', marginBottom: SPACING.sm },
+  modalDesc: { fontSize: 13, color: '#6c7772', lineHeight: 20, marginBottom: SPACING.lg },
   modalInput: {
-    backgroundColor: COLORS.bgSurface, color: COLORS.textPrimary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.lg, paddingVertical: 14, ...TYPOGRAPHY.body,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.xl, minHeight: 48,
+    backgroundColor: '#eeebe3', color: '#171e19', borderRadius: 16,
+    paddingHorizontal: SPACING.lg, paddingVertical: 14, fontSize: 14, fontWeight: '600',
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.xl, minHeight: 48,
   },
   budgetInputRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.md, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#eeebe3',
+    borderRadius: 16, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     marginBottom: SPACING.xl, paddingHorizontal: SPACING.lg,
   },
-  budgetCurrency: { ...TYPOGRAPHY.displaySm, color: COLORS.accent, marginRight: SPACING.sm },
-  budgetInput: { flex: 1, color: COLORS.textPrimary, fontSize: 22, fontWeight: '700', paddingVertical: 14 },
+  budgetCurrency: { fontSize: 24, fontWeight: '800', color: '#ca0013', marginRight: SPACING.sm },
+  budgetInput: { flex: 1, color: '#171e19', fontSize: 22, fontWeight: '800', paddingVertical: 14 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.md },
   modalCancelBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalCancelText: { color: COLORS.textMuted, fontWeight: '600', fontSize: 15 },
-  modalSaveBtn: { backgroundColor: COLORS.accentStrong, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xxl, borderRadius: RADIUS.pill },
-  modalSaveText: { color: COLORS.textPrimary, fontWeight: '700', fontSize: 15 },
+  modalCancelText: { color: '#6c7772', fontWeight: '600', fontSize: 15 },
+  modalSaveBtn: { backgroundColor: '#ca0013', paddingVertical: SPACING.md, paddingHorizontal: SPACING.xxl, borderRadius: RADIUS.pill },
+  modalSaveText: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
 });
+

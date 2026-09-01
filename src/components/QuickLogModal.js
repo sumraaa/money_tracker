@@ -136,8 +136,8 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.merchantInput}
-                  placeholder="Merchant (e.g. Swiggy)"
-                  placeholderTextColor={COLORS.textDisabled}
+                  placeholder="Merchant (e.g. Swiggy, Uber)"
+                  placeholderTextColor={COLORS.textMuted}
                   value={merchant} onChangeText={handleMerchantChange} maxLength={50}
                 />
               </View>
@@ -187,7 +187,7 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
 
               {/* Note */}
               <TextInput style={styles.noteInput}
-                placeholder="Add a note (optional)" placeholderTextColor={COLORS.textDisabled}
+                placeholder="Add a note (optional)" placeholderTextColor={COLORS.textMuted}
                 value={message} onChangeText={setMessage} maxLength={100}
               />
 
@@ -203,7 +203,7 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
                 ]}
                 onPress={handleSubmit}>
                 <Text style={styles.saveBtnText}>
-                  {showSuccess ? '✓ Saved' : isSubmitting ? 'Saving...' : `Save${amount ? ` ₹${amount}` : ''}`}
+                  {showSuccess ? '✓ Saved' : isSubmitting ? 'Saving...' : `Log Expense${amount ? ` ₹${amount}` : ''}`}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -215,66 +215,74 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(23, 30, 25, 0.65)', justifyContent: 'flex-end' },
   sheetContainer: {
-    backgroundColor: '#050505', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: '#ffffff', borderTopLeftRadius: 40, borderTopRightRadius: 40,
     paddingHorizontal: SPACING.xl, paddingTop: SPACING.md, paddingBottom: SPACING.sm,
-    borderTopWidth: 1, borderColor: 'rgba(255, 255, 255, 0.12)',
-    maxHeight: SCREEN_HEIGHT * 0.92,
+    borderTopWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    maxHeight: SCREEN_HEIGHT * 0.94,
+    shadowColor: '#171e19',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   scrollContent: { paddingBottom: SPACING.lg },
   header: { alignItems: 'center', marginBottom: SPACING.sm, position: 'relative' },
-  sheetHandle: { width: 36, height: 4, backgroundColor: '#333333', borderRadius: 2 },
+  sheetHandle: { width: 44, height: 5, backgroundColor: '#b7c6c2', borderRadius: 3 },
   closeBtn: { position: 'absolute', right: 0, top: -4, padding: SPACING.sm },
-  closeBtnText: { color: '#888888', fontSize: 18, fontWeight: '500' },
+  closeBtnText: { color: '#6c7772', fontSize: 18, fontWeight: '700' },
 
   amountContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginVertical: SPACING.md, paddingVertical: SPACING.lg,
-    backgroundColor: '#111111', borderRadius: 24,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: SPACING.sm, paddingVertical: SPACING.md,
+    backgroundColor: '#eeebe3', borderRadius: 24,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
-  currencySymbol: { color: '#FF4500', fontSize: 32, fontWeight: '800', marginRight: SPACING.sm },
-  amountDisplay: { fontFamily: TYPOGRAPHY.displayLg.fontFamily, fontSize: 36, color: '#FFFFFF', fontWeight: '800', fontVariant: ['tabular-nums'] },
+  currencySymbol: { color: '#ca0013', fontSize: 32, fontWeight: '800', marginRight: SPACING.sm },
+  amountDisplay: { fontSize: 36, color: '#171e19', fontWeight: '800', fontVariant: ['tabular-nums'] },
 
   inputRow: { marginBottom: SPACING.sm },
   merchantInput: {
-    backgroundColor: '#111111', color: '#FFFFFF', borderRadius: RADIUS.pill,
-    paddingHorizontal: SPACING.lg, paddingVertical: 14, fontSize: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#ffffff', color: '#171e19', borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.lg, paddingVertical: 14, fontSize: 14, fontWeight: '600',
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
   suggestionsRow: { marginBottom: SPACING.sm, maxHeight: 40 },
   suggestionsContent: { gap: SPACING.sm },
   suggestionChip: {
-    backgroundColor: '#111111', paddingHorizontal: SPACING.md, paddingVertical: 8,
-    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#eeebe3', paddingHorizontal: SPACING.md, paddingVertical: 8,
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
-  suggestionText: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 12, color: '#888888' },
+  suggestionText: { fontSize: 12, color: '#171e19', fontWeight: '600' },
 
-  paymentSection: { marginVertical: SPACING.sm },
-  sectionLabel: { fontFamily: TYPOGRAPHY.overline.fontFamily, fontSize: 10, color: '#888888', letterSpacing: 1.5, marginBottom: SPACING.sm, paddingHorizontal: SPACING.xs },
+  paymentSection: { marginVertical: SPACING.xs },
+  sectionLabel: { fontSize: 10, color: '#6c7772', fontWeight: '800', letterSpacing: 1.5, marginBottom: SPACING.sm, paddingHorizontal: SPACING.xs },
   paymentContent: { gap: SPACING.sm },
   paymentChip: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#111111',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#eeebe3',
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.pill,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', gap: 5,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', gap: 5,
   },
-  paymentChipActive: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
+  paymentChipActive: { backgroundColor: '#171e19', borderColor: '#171e19' },
   paymentIcon: { fontSize: 14 },
-  paymentText: { fontFamily: TYPOGRAPHY.labelSm.fontFamily, fontSize: 12, color: '#888888' },
-  paymentTextActive: { color: '#000000', fontWeight: '800' },
+  paymentText: { fontSize: 12, color: '#6c7772', fontWeight: '600' },
+  paymentTextActive: { color: '#ffffff', fontWeight: '800' },
 
   noteInput: {
-    backgroundColor: '#111111', color: '#FFFFFF', borderRadius: RADIUS.pill,
-    paddingHorizontal: SPACING.lg, paddingVertical: 14, fontSize: 13,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', marginBottom: SPACING.sm,
+    backgroundColor: '#ffffff', color: '#171e19', borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.lg, paddingVertical: 12, fontSize: 13,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.xs, marginTop: SPACING.xs,
   },
 
   saveBtn: {
-    backgroundColor: '#FF4500', paddingVertical: 16, borderRadius: RADIUS.pill,
-    alignItems: 'center', justifyContent: 'center', marginTop: SPACING.xs,
+    backgroundColor: '#ca0013', paddingVertical: 16, borderRadius: RADIUS.pill,
+    alignItems: 'center', justifyContent: 'center', marginTop: SPACING.sm,
+    shadowColor: '#ca0013', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 10, elevation: 4,
   },
-  saveBtnDisabled: { backgroundColor: '#181818' },
-  saveBtnSuccess: { backgroundColor: '#059669' },
-  saveBtnText: { fontFamily: TYPOGRAPHY.label.fontFamily, color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  saveBtnDisabled: { backgroundColor: '#b7c6c2', shadowOpacity: 0 },
+  saveBtnSuccess: { backgroundColor: '#16a34a' },
+  saveBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '800' },
 });
+

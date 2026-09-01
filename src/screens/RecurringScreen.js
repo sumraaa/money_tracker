@@ -33,7 +33,7 @@ function getCategoryIcon(name) {
 
 function getCategoryColor(name) {
   const cat = DEFAULT_CATEGORIES.find(c => c.name.toLowerCase() === (name || '').toLowerCase());
-  return cat?.color || COLORS.accent;
+  return cat?.color || COLORS.accentRed;
 }
 
 export default function RecurringScreen({ onBack }) {
@@ -153,11 +153,11 @@ export default function RecurringScreen({ onBack }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <ArrowLeft size={20} color={COLORS.textPrimary} />
+          <ArrowLeft size={20} color="#171e19" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Subscriptions & Bills</Text>
         <TouchableOpacity style={styles.addHeaderBtn} onPress={() => setShowAddModal(true)}>
-          <Plus size={20} color={COLORS.accent} />
+          <Plus size={20} color="#ca0013" />
         </TouchableOpacity>
       </View>
 
@@ -168,7 +168,7 @@ export default function RecurringScreen({ onBack }) {
           <Text style={styles.heroAmount}>{formatINR(totalMonthlyCost, { showPaise: false })}<Text style={styles.heroPer}> /mo</Text></Text>
           <View style={styles.heroMetaRow}>
             <View style={styles.heroMetaChip}>
-              <Sparkles size={12} color={COLORS.accent} />
+              <Sparkles size={12} color="#ca0013" />
               <Text style={styles.heroMetaText}>{activeCount} active recurring payments</Text>
             </View>
           </View>
@@ -192,10 +192,10 @@ export default function RecurringScreen({ onBack }) {
               const laterItems = activeItems.filter(i => i.next_date > nextWeekStr);
 
               const buckets = [
-                { label: 'Due Today', items: todayItems, color: COLORS.error },
+                { label: 'Due Today', items: todayItems, color: '#ca0013' },
                 { label: 'Due Tomorrow', items: tomorrowItems, color: COLORS.warning },
-                { label: 'Due This Week', items: weekItems, color: COLORS.accent },
-                { label: 'Later', items: laterItems, color: COLORS.textMuted },
+                { label: 'Due This Week', items: weekItems, color: '#171e19' },
+                { label: 'Later', items: laterItems, color: '#6c7772' },
               ].filter(b => b.items.length > 0);
 
               if (buckets.length === 0) {
@@ -223,13 +223,13 @@ export default function RecurringScreen({ onBack }) {
 
         {items.length === 0 ? (
           <View style={styles.emptyCard}>
-            <RefreshCw size={36} color={COLORS.textDisabled} style={{ marginBottom: SPACING.md }} />
+            <RefreshCw size={36} color="#6c7772" style={{ marginBottom: SPACING.md }} />
             <Text style={styles.emptyTitle}>No Subscriptions Added</Text>
             <Text style={styles.emptySub}>
               Track Netflix, Rent, Spotify, Broadband, Gym, and regular bills to get automatic reminders.
             </Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAddModal(true)}>
-              <Plus size={16} color={COLORS.textPrimary} />
+              <Plus size={16} color="#ffffff" />
               <Text style={styles.emptyBtnText}>Add First Subscription</Text>
             </TouchableOpacity>
           </View>
@@ -266,13 +266,13 @@ export default function RecurringScreen({ onBack }) {
                     <TouchableOpacity
                       style={styles.iconActionBtn}
                       onPress={() => handleToggleActive(item.id)}>
-                      {isActive ? <CheckCircle2 size={18} color={COLORS.success} /> : <PauseCircle size={18} color={COLORS.textMuted} />}
+                      {isActive ? <CheckCircle2 size={18} color={COLORS.success} /> : <PauseCircle size={18} color="#6c7772" />}
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.iconActionBtn}
                       onPress={() => handleDelete(item.id, item.merchant)}>
-                      <Trash2 size={18} color={COLORS.error} />
+                      <Trash2 size={18} color="#ca0013" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -292,7 +292,7 @@ export default function RecurringScreen({ onBack }) {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Netflix, Apartment Rent, Gym"
-                placeholderTextColor={COLORS.textDisabled}
+                placeholderTextColor="#6c7772"
                 value={merchant} onChangeText={setMerchant}
               />
 
@@ -300,7 +300,7 @@ export default function RecurringScreen({ onBack }) {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. 649"
-                placeholderTextColor={COLORS.textDisabled}
+                placeholderTextColor="#6c7772"
                 value={amount} onChangeText={setAmount} keyboardType="numeric"
               />
 
@@ -319,15 +319,15 @@ export default function RecurringScreen({ onBack }) {
               <TextInput
                 style={styles.input}
                 value={nextDate} onChangeText={setNextDate}
-                placeholder="2026-09-01" placeholderTextColor={COLORS.textDisabled}
+                placeholder="2026-09-01" placeholderTextColor="#6c7772"
               />
 
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Track as Subscription</Text>
                 <Switch
                   value={isSub} onValueChange={setIsSub}
-                  trackColor={{ false: COLORS.bgSurface, true: COLORS.accentStrong }}
-                  thumbColor={COLORS.textPrimary}
+                  trackColor={{ false: '#eeebe3', true: '#ca0013' }}
+                  thumbColor="#ffffff"
                 />
               </View>
             </ScrollView>
@@ -348,116 +348,122 @@ export default function RecurringScreen({ onBack }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: '#eeebe3' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.md,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.bgElevated,
-    justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
   addHeaderBtn: {
-    width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.accentBg,
-    justifyContent: 'center', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.borderAccent,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  headerTitle: { ...TYPOGRAPHY.h2, color: COLORS.textPrimary },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 110 },
 
   heroCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xl,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.xl, marginTop: SPACING.sm,
+    backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.xl, marginTop: SPACING.sm,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
   },
-  heroLabel: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, marginBottom: SPACING.xs },
-  heroAmount: { ...TYPOGRAPHY.displayLg, color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
-  heroPer: { fontSize: 18, color: COLORS.textMuted, fontWeight: '400' },
+  heroLabel: { fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5, marginBottom: SPACING.xs },
+  heroAmount: { fontSize: 36, fontWeight: '800', color: '#171e19', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
+  heroPer: { fontSize: 18, color: '#6c7772', fontWeight: '500' },
   heroMetaRow: { flexDirection: 'row', marginTop: SPACING.md },
   heroMetaChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.accentBg, paddingHorizontal: SPACING.md, paddingVertical: 6,
-    borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.borderAccent,
+    backgroundColor: 'rgba(202, 0, 19, 0.08)', paddingHorizontal: SPACING.md, paddingVertical: 6,
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: 'rgba(202, 0, 19, 0.25)',
   },
-  heroMetaText: { ...TYPOGRAPHY.labelSm, color: COLORS.accent },
+  heroMetaText: { fontSize: 12, fontWeight: '700', color: '#ca0013' },
 
   // Upcoming Timeline
   timelineCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.xl,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.xl,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
   bucketRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: SPACING.sm, gap: SPACING.sm },
   bucketDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
   bucketInfo: { flex: 1 },
-  bucketLabel: { ...TYPOGRAPHY.label, color: COLORS.textPrimary, marginBottom: 2 },
-  bucketSub: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, lineHeight: 18 },
-  timelineEmpty: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, marginTop: SPACING.xs },
+  bucketLabel: { fontSize: 14, fontWeight: '700', color: '#171e19', marginBottom: 2 },
+  bucketSub: { fontSize: 13, color: '#6c7772', lineHeight: 18 },
+  timelineEmpty: { fontSize: 13, color: '#6c7772', marginTop: SPACING.xs },
 
   sectionHeader: { marginBottom: SPACING.md },
-  sectionTitle: { ...TYPOGRAPHY.overline, color: COLORS.textMuted },
+  sectionTitle: { fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5 },
 
   emptyCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xxxl,
-    alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xxxl,
+    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
-  emptyTitle: { ...TYPOGRAPHY.h3, color: COLORS.textPrimary, marginBottom: SPACING.xs },
-  emptySub: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: SPACING.xl },
+  emptyTitle: { fontSize: 18, color: '#171e19', fontWeight: '700', marginBottom: SPACING.xs },
+  emptySub: { fontSize: 13, color: '#6c7772', textAlign: 'center', lineHeight: 20, marginBottom: SPACING.xl },
   emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.accentStrong,
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ca0013',
     paddingHorizontal: SPACING.xl, paddingVertical: 14, borderRadius: RADIUS.pill,
   },
-  emptyBtnText: { ...TYPOGRAPHY.label, color: COLORS.textPrimary },
+  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
 
   itemCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.lg,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
   itemCardPaused: { opacity: 0.5 },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.md },
-  itemIconWrap: { width: 44, height: 44, borderRadius: RADIUS.md, justifyContent: 'center', alignItems: 'center' },
+  itemIconWrap: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   itemMainInfo: { flex: 1 },
-  itemMerchant: { ...TYPOGRAPHY.h3, color: COLORS.textPrimary },
-  itemSub: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, marginTop: 2 },
-  itemAmount: { ...TYPOGRAPHY.monoLg, color: COLORS.textPrimary },
+  itemMerchant: { fontSize: 16, fontWeight: '700', color: '#171e19' },
+  itemSub: { fontSize: 12, color: '#6c7772', marginTop: 2 },
+  itemAmount: { fontSize: 16, fontWeight: '800', color: '#171e19' },
 
   itemFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border, paddingTop: SPACING.md,
+    borderTopWidth: 1, borderTopColor: '#eeebe3', paddingTop: SPACING.md,
   },
-  itemNextDate: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
+  itemNextDate: { fontSize: 12, color: '#6c7772', fontWeight: '500' },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   actionPill: {
-    backgroundColor: COLORS.accentBg, paddingHorizontal: SPACING.md, paddingVertical: 5,
-    borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.borderAccent,
+    backgroundColor: 'rgba(202, 0, 19, 0.08)', paddingHorizontal: SPACING.md, paddingVertical: 5,
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: 'rgba(202, 0, 19, 0.25)',
   },
-  actionPillText: { ...TYPOGRAPHY.labelSm, color: COLORS.accent },
+  actionPillText: { fontSize: 12, fontWeight: '700', color: '#ca0013' },
   iconActionBtn: { padding: 4 },
 
   // Modal
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: SPACING.xxl },
-  modalBox: { backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xxl, borderWidth: 1, borderColor: COLORS.borderStrong, maxHeight: '85%' },
-  modalTitle: { ...TYPOGRAPHY.h2, color: COLORS.textPrimary, marginBottom: SPACING.xl },
-  inputLabel: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, marginTop: SPACING.md, marginBottom: 6 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(23, 30, 25, 0.65)', justifyContent: 'center', padding: SPACING.xxl },
+  modalBox: { backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xxl, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', maxHeight: '85%' },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#171e19', marginBottom: SPACING.xl },
+  inputLabel: { fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5, marginTop: SPACING.md, marginBottom: 6 },
   input: {
-    backgroundColor: COLORS.bgSurface, color: COLORS.textPrimary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.lg, paddingVertical: 12, ...TYPOGRAPHY.body,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    backgroundColor: '#eeebe3', color: '#171e19', borderRadius: 16,
+    paddingHorizontal: SPACING.lg, paddingVertical: 12, fontSize: 14, fontWeight: '600',
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
   freqRow: { flexDirection: 'row', gap: SPACING.sm, marginVertical: SPACING.xs },
   freqChip: {
-    flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: COLORS.bgSurface,
-    alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    flex: 1, paddingVertical: 10, borderRadius: 16, backgroundColor: '#eeebe3',
+    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
-  freqChipActive: { backgroundColor: COLORS.accentMuted, borderColor: COLORS.accent },
-  freqText: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
-  freqTextActive: { color: COLORS.accent },
+  freqChipActive: { backgroundColor: '#171e19', borderColor: '#171e19' },
+  freqText: { fontSize: 12, fontWeight: '600', color: '#6c7772' },
+  freqTextActive: { color: '#ffffff', fontWeight: '800' },
 
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.lg, marginBottom: SPACING.md },
-  switchLabel: { ...TYPOGRAPHY.body, color: COLORS.textPrimary },
+  switchLabel: { fontSize: 15, color: '#171e19', fontWeight: '700' },
 
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.md, marginTop: SPACING.xl },
   cancelBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  cancelText: { ...TYPOGRAPHY.label, color: COLORS.textMuted },
-  saveBtn: { backgroundColor: COLORS.accentStrong, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xxl, borderRadius: RADIUS.pill },
-  saveText: { ...TYPOGRAPHY.label, color: COLORS.textPrimary },
+  cancelText: { fontSize: 14, fontWeight: '600', color: '#6c7772' },
+  saveBtn: { backgroundColor: '#ca0013', paddingVertical: SPACING.md, paddingHorizontal: SPACING.xxl, borderRadius: RADIUS.pill },
+  saveText: { fontSize: 14, fontWeight: '800', color: '#ffffff' },
 });
+

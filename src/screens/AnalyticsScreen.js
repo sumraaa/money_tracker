@@ -23,7 +23,7 @@ const TIMEFRAMES = [
 
 function getCategoryColor(name) {
   const cat = DEFAULT_CATEGORIES.find(c => c.name.toLowerCase() === (name || '').toLowerCase());
-  return cat?.color || COLORS.accent;
+  return cat?.color || COLORS.accentRed;
 }
 function getCategoryIcon(name) {
   const cat = DEFAULT_CATEGORIES.find(c => c.name.toLowerCase() === (name || '').toLowerCase());
@@ -86,12 +86,19 @@ export default function AnalyticsScreen() {
   const avgDaily = chartData.length > 0 ? totalSpent / chartData.length : 0;
   const txCount = expenses.length;
 
+  const rawValues = Array.isArray(chartData) ? chartData.map(d => (typeof d?.value === 'number' ? d.value : 0)) : [];
+  const maxValueInChart = rawValues.length > 0 ? Math.max(...rawValues) : 0;
+
   const safeData = Array.isArray(chartData)
-    ? chartData.map((d) => ({
-        value: typeof d?.value === 'number' && !isNaN(d.value) ? d.value : 0,
-        label: typeof d?.label === 'string' ? d.label : '',
-        frontColor: '#FF4500',
-      }))
+    ? chartData.map((d) => {
+        const val = typeof d?.value === 'number' && !isNaN(d.value) ? d.value : 0;
+        const isPeak = val > 0 && val === maxValueInChart;
+        return {
+          value: val,
+          label: typeof d?.label === 'string' ? d.label : '',
+          frontColor: isPeak ? '#ca0013' : '#171e19',
+        };
+      })
     : [];
 
   const hasData = safeData.length > 0 && safeData.some((d) => d.value > 0);
@@ -105,10 +112,21 @@ export default function AnalyticsScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Analytics.</Text>
+        <Text style={styles.screenTitle}>Analytics</Text>
       </View>
 
-      {/* Spending Summary */}
+      {/* Timeframe Toggle Pills */}
+      <View style={styles.toggleRow}>
+        {TIMEFRAMES.map((tf) => (
+          <TouchableOpacity key={tf.id} activeOpacity={0.7}
+            style={[styles.toggleBtn, timeframe === tf.id && styles.toggleBtnActive]}
+            onPress={() => handleTimeframe(tf.id)}>
+            <Text style={[styles.toggleLabel, timeframe === tf.id && styles.toggleLabelActive]}>{tf.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Spending Summary Banner */}
       {summary && summary.total > 0 && (
         <View style={styles.summaryCard}>
           <Text style={styles.summaryHeadline}>
@@ -132,21 +150,10 @@ export default function AnalyticsScreen() {
         </View>
       )}
 
-      {/* Timeframe Toggle Pills */}
-      <View style={styles.toggleRow}>
-        {TIMEFRAMES.map((tf) => (
-          <TouchableOpacity key={tf.id} activeOpacity={0.7}
-            style={[styles.toggleBtn, timeframe === tf.id && styles.toggleBtnActive]}
-            onPress={() => handleTimeframe(tf.id)}>
-            <Text style={[styles.toggleLabel, timeframe === tf.id && styles.toggleLabelActive]}>{tf.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Hero Metric Card */}
       <View style={styles.heroCard}>
         <View style={styles.heroCardHeader}>
-          <Text style={styles.heroMeta}>TOTAL · THIS {timeframe.toUpperCase()}</Text>
+          <Text style={styles.heroMeta}>TOTAL SPEND · THIS {timeframe.toUpperCase()}</Text>
           <View style={styles.cardPillBadge}>
             <Text style={styles.cardPillText}>01</Text>
           </View>
@@ -168,7 +175,7 @@ export default function AnalyticsScreen() {
         </View>
       </View>
 
-      {/* Mini Metrics Dual Column Grid */}
+      {/* Mini Metrics 3-Column Bento Grid */}
       <View style={styles.metricsGrid}>
         <View style={styles.metricGridItem}>
           <Text style={styles.metricGridLabel}>AVG / DAY</Text>
@@ -184,31 +191,18 @@ export default function AnalyticsScreen() {
         </View>
       </View>
 
-      {/* Spending Score */}
-      {score && (
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreCircle}>
-            <Text style={styles.scoreNum}>{score.score}</Text>
-          </View>
-          <View style={styles.scoreInfo}>
-            <Text style={styles.scoreTitle}>Spending Score</Text>
-            <Text style={styles.scoreDesc}>{score.label}</Text>
-          </View>
-        </View>
-      )}
-
       {/* Chart */}
       <View style={styles.chartCard}>
         <View style={styles.chartCardHeader}>
-          <Text style={styles.sectionTitle}>DAILY SPEND CHART</Text>
+          <Text style={styles.sectionTitle}>SPENDING OVERVIEW</Text>
           <View style={styles.cardPillBadge}>
             <Text style={styles.cardPillText}>02</Text>
           </View>
         </View>
         {loading ? (
           <View style={styles.emptyChart}>
-            <ActivityIndicator color="#FF4500" size="small" />
-            <Text style={styles.emptyChartText}>Loading…</Text>
+            <ActivityIndicator color={COLORS.accentRed} size="small" />
+            <Text style={styles.emptyChartText}>Loading chart…</Text>
           </View>
         ) : !hasData ? (
           <View style={styles.emptyChart}>
@@ -221,12 +215,12 @@ export default function AnalyticsScreen() {
             data={safeData} width={CHART_WIDTH - 40} height={160}
             barWidth={safeData.length > 15 ? 6 : safeData.length > 7 ? 10 : 16}
             spacing={safeData.length > 15 ? 3 : safeData.length > 7 ? 6 : 12}
-            barBorderRadius={4} frontColor="#FF4500"
-            yAxisColor="transparent" xAxisColor="rgba(255, 255, 255, 0.08)"
-            yAxisTextStyle={{ color: '#888888', fontSize: 10 }}
-            xAxisLabelTextStyle={{ color: '#888888', fontSize: 9 }}
+            barBorderRadius={6} frontColor="#171e19"
+            yAxisColor="transparent" xAxisColor="rgba(183, 198, 194, 0.35)"
+            yAxisTextStyle={{ color: '#6c7772', fontSize: 10 }}
+            xAxisLabelTextStyle={{ color: '#6c7772', fontSize: 9 }}
             noOfSections={4} maxValue={maxVal * 1.2}
-            backgroundColor="transparent" rulesColor="rgba(255, 255, 255, 0.04)"
+            backgroundColor="transparent" rulesColor="rgba(183, 198, 194, 0.20)"
             rulesType="solid" hideOrigin isAnimated animationDuration={400}
           />
         )}
@@ -235,10 +229,10 @@ export default function AnalyticsScreen() {
       {/* Budget Status */}
       {budget?.hasOverallBudget && (
         <View style={styles.budgetCard}>
-          <Text style={styles.sectionTitle}>BUDGET STATUS</Text>
+          <Text style={styles.sectionTitle}>BUDGET PROGRESS</Text>
           <View style={styles.budgetRow}>
             <View>
-              <Text style={styles.budgetLabel}>Monthly budget</Text>
+              <Text style={styles.budgetLabel}>Monthly Limit</Text>
               <Text style={styles.budgetValue}>{formatINR(budget.overallBudget, { showPaise: false })}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
@@ -256,7 +250,7 @@ export default function AnalyticsScreen() {
           </View>
           {budget.dailyAllowance > 0 && (
             <Text style={styles.budgetHint}>
-              Safe to spend: {formatINR(budget.dailyAllowance, { showPaise: false })}/day for {budget.daysLeft} days
+              Safe daily limit: {formatINR(budget.dailyAllowance, { showPaise: false })}/day for {budget.daysLeft} remaining days.
             </Text>
           )}
         </View>
@@ -303,8 +297,8 @@ export default function AnalyticsScreen() {
       {insights.length > 0 && (
         <View style={styles.insightsCard}>
           <View style={styles.insightsHeader}>
-            <Lightbulb size={14} color={COLORS.accent} />
-            <Text style={styles.sectionTitle}>INSIGHTS</Text>
+            <Lightbulb size={16} color={COLORS.accentRed} />
+            <Text style={styles.sectionTitle}>SMART INSIGHTS</Text>
           </View>
           {insights.map((insight, i) => (
             <View key={i} style={styles.insightRow}>
@@ -312,7 +306,7 @@ export default function AnalyticsScreen() {
                 insight.severity === 'warning' && { backgroundColor: COLORS.warning },
                 insight.severity === 'error' && { backgroundColor: COLORS.error },
                 insight.severity === 'success' && { backgroundColor: COLORS.success },
-                insight.severity === 'info' && { backgroundColor: COLORS.accent },
+                insight.severity === 'info' && { backgroundColor: COLORS.accentRed },
               ]} />
               <Text style={styles.insightText}>{insight.text}</Text>
             </View>
@@ -333,148 +327,126 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: COLORS.bg },
-  content: { paddingHorizontal: SPACING.xxl, paddingTop: SPACING.xl, paddingBottom: 40 },
+  scroll: { flex: 1, backgroundColor: '#eeebe3' },
+  content: { paddingHorizontal: SPACING.xxl, paddingTop: SPACING.xl, paddingBottom: 110 },
 
-  header: { marginBottom: SPACING.lg },
-  screenTitle: { ...TYPOGRAPHY.h1, color: COLORS.textPrimary },
-
-  // Spending Summary
-  summaryCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xl,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.lg,
-  },
-  summaryHeadline: { ...TYPOGRAPHY.h2, color: COLORS.textPrimary, marginBottom: SPACING.md, lineHeight: 26 },
-  summaryCategories: { marginBottom: SPACING.md },
-  summaryCatRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  summaryCatName: { ...TYPOGRAPHY.body, color: COLORS.textSecondary },
-  summaryCatAmount: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary },
-  summaryChange: { ...TYPOGRAPHY.label, marginTop: SPACING.xs },
+  header: { marginBottom: SPACING.md },
+  screenTitle: { fontSize: 32, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
 
   // Toggle
   toggleRow: {
-    flexDirection: 'row', backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, padding: 3, marginBottom: SPACING.lg, gap: 3,
+    flexDirection: 'row', backgroundColor: '#ffffff', borderRadius: 999,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', padding: 4, marginBottom: SPACING.lg, gap: 4,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
-  toggleBtn: { flex: 1, paddingVertical: 9, borderRadius: RADIUS.sm, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: COLORS.accentMuted },
-  toggleLabel: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
-  toggleLabelActive: { color: COLORS.accent },
+  toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, alignItems: 'center' },
+  toggleBtnActive: { backgroundColor: '#171e19' },
+  toggleLabel: { fontSize: 13, fontWeight: '600', color: '#6c7772' },
+  toggleLabelActive: { color: '#ffffff', fontWeight: '700' },
 
-  // Hero
+  // Spending Summary
+  summaryCard: {
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.lg,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
+  },
+  summaryHeadline: { fontSize: 18, fontWeight: '800', color: '#171e19', marginBottom: SPACING.md, lineHeight: 24 },
+  summaryCategories: { marginBottom: SPACING.md },
+  summaryCatRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  summaryCatName: { fontSize: 14, color: '#6c7772', fontWeight: '500' },
+  summaryCatAmount: { fontSize: 14, fontWeight: '700', color: '#171e19' },
+  summaryChange: { fontSize: 13, fontWeight: '700', marginTop: SPACING.xs },
+
+  // Hero Card
   heroCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.xl,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 40, padding: SPACING.xxl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 4,
   },
-  heroMeta: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, marginBottom: SPACING.xs },
-  heroAmount: { ...TYPOGRAPHY.displayMd, color: COLORS.textPrimary, fontVariant: ['tabular-nums'], marginBottom: SPACING.md },
+  heroCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs },
+  heroMeta: { fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5 },
+  cardPillBadge: { backgroundColor: 'rgba(183, 198, 194, 0.25)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
+  cardPillText: { fontSize: 10, fontWeight: '800', color: '#6c7772' },
+  heroAmount: { fontSize: 36, fontWeight: '800', color: '#171e19', fontVariant: ['tabular-nums'], marginBottom: SPACING.md, letterSpacing: -0.5 },
   burnRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  burnText: { ...TYPOGRAPHY.labelSm },
-  burnFlat: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted },
+  burnText: { fontSize: 13, fontWeight: '700' },
+  burnFlat: { fontSize: 13, color: '#6c7772', fontWeight: '500' },
 
-  // Metrics
-  metricsRow: {
-    flexDirection: 'row', backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, padding: SPACING.lg, marginBottom: SPACING.md, alignItems: 'center',
+  // Metrics Grid
+  metricsGrid: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
+  metricGridItem: {
+    flex: 1, backgroundColor: '#ffffff', borderRadius: 16, padding: SPACING.md,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', alignItems: 'center',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  metricChip: { flex: 1, alignItems: 'center' },
-  metricDivider: { width: StyleSheet.hairlineWidth, height: 30, backgroundColor: COLORS.border },
-  metricLabel: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, fontSize: 9, marginBottom: 4 },
-  metricValue: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary },
-
-  // Score
-  scoreCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.lg,
-    padding: SPACING.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
-    marginBottom: SPACING.md, gap: SPACING.lg,
-  },
-  scoreCircle: {
-    flexDirection: 'row', alignItems: 'baseline', width: 64, height: 64, borderRadius: 32,
-    backgroundColor: COLORS.accentBg, borderWidth: 2, borderColor: COLORS.accent,
-    justifyContent: 'center',
-  },
-  scoreNum: { ...TYPOGRAPHY.monoXl, color: COLORS.accent },
-  scoreOf: { ...TYPOGRAPHY.labelXs, color: COLORS.textMuted, marginLeft: 1 },
-  scoreInfo: { flex: 1 },
-  scoreTitle: { ...TYPOGRAPHY.label, color: COLORS.textPrimary },
-  scoreDesc: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, marginTop: 2 },
+  metricGridLabel: { fontSize: 10, fontWeight: '800', color: '#6c7772', letterSpacing: 1, marginBottom: 4 },
+  metricGridValue: { fontSize: 15, fontWeight: '800', color: '#171e19' },
 
   // Chart
   chartCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden',
+    backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md, overflow: 'hidden',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
   },
-  sectionTitle: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, marginBottom: SPACING.md },
+  chartCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
+  sectionTitle: { fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5 },
   emptyChart: { alignItems: 'center', paddingVertical: SPACING.xxxl },
   emptyChartIcon: { fontSize: 32, marginBottom: SPACING.md, opacity: 0.5 },
-  emptyChartTitle: { ...TYPOGRAPHY.h3, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  emptyChartText: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, textAlign: 'center' },
-
-  // Category Breakdown
-  breakdownCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
-  },
-  breakdownRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md, gap: SPACING.sm },
-  breakdownIcon: { fontSize: 18, width: 28, textAlign: 'center' },
-  breakdownInfo: { flex: 1 },
-  breakdownLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  breakdownCat: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, fontWeight: '600', flex: 1 },
-  breakdownAmt: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary },
-  breakdownBarBg: { height: 4, backgroundColor: COLORS.bgSurface, borderRadius: 2, overflow: 'hidden' },
-  breakdownBarFill: { height: '100%', borderRadius: 2 },
-  breakdownPct: { ...TYPOGRAPHY.monoSm, color: COLORS.textMuted, minWidth: 36, textAlign: 'right' },
+  emptyChartTitle: { fontSize: 17, fontWeight: '700', color: '#171e19', marginBottom: SPACING.xs },
+  emptyChartText: { fontSize: 13, color: '#6c7772', textAlign: 'center' },
 
   // Budget
   budgetCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
   budgetRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.md },
-  budgetLabel: { ...TYPOGRAPHY.labelSm, color: COLORS.textMuted, marginBottom: 3 },
-  budgetValue: { ...TYPOGRAPHY.monoLg, color: COLORS.textPrimary },
-  budgetTrack: { height: 6, backgroundColor: COLORS.bgSurface, borderRadius: 3, overflow: 'hidden', marginBottom: SPACING.sm },
-  budgetFill: { height: '100%', backgroundColor: COLORS.accent, borderRadius: 3 },
-  budgetHint: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted },
+  budgetLabel: { fontSize: 12, color: '#6c7772', fontWeight: '600', marginBottom: 3 },
+  budgetValue: { fontSize: 18, fontWeight: '800', color: '#171e19' },
+  budgetTrack: { height: 6, backgroundColor: '#eeebe3', borderRadius: 3, overflow: 'hidden', marginBottom: SPACING.sm },
+  budgetFill: { height: '100%', backgroundColor: '#ca0013', borderRadius: 3 },
+  budgetHint: { fontSize: 13, color: '#6c7772', lineHeight: 18 },
 
   // Insights
   insightsCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
   },
-  insightsHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  insightsHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: SPACING.md, gap: SPACING.sm },
-  insightDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6, backgroundColor: COLORS.accent },
-  insightText: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, flex: 1, lineHeight: 21 },
+  insightDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6, backgroundColor: '#ca0013' },
+  insightText: { fontSize: 14, color: '#171e19', flex: 1, lineHeight: 20 },
 
   // Merchant Insights
   merchantCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
   },
   merchantRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   merchantInfo: { flex: 1, marginRight: SPACING.md },
-  merchantName: { ...TYPOGRAPHY.body, color: COLORS.textPrimary, fontWeight: '600' },
-  merchantSub: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, marginTop: 2 },
-  merchantTotal: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary },
+  merchantName: { fontSize: 15, color: '#171e19', fontWeight: '700' },
+  merchantSub: { fontSize: 12, color: '#6c7772', marginTop: 2 },
+  merchantTotal: { fontSize: 15, fontWeight: '800', color: '#171e19' },
 
   // Payment Method
   paymentCard: {
-    backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl, padding: SPACING.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.md,
+    backgroundColor: '#ffffff', borderRadius: 24, padding: SPACING.xl,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.md,
   },
   paymentRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md, gap: SPACING.sm },
   paymentInfo: { flex: 1 },
   paymentLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  paymentMethod: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, fontWeight: '600' },
-  paymentAmt: { ...TYPOGRAPHY.mono, color: COLORS.textPrimary },
-  paymentBarBg: { height: 4, backgroundColor: COLORS.bgSurface, borderRadius: 2, overflow: 'hidden' },
-  paymentBarFill: { height: '100%', backgroundColor: COLORS.accent, borderRadius: 2 },
-  paymentPct: { ...TYPOGRAPHY.monoSm, color: COLORS.textMuted, minWidth: 36, textAlign: 'right' },
+  paymentMethod: { fontSize: 14, color: '#171e19', fontWeight: '700' },
+  paymentAmt: { fontSize: 14, fontWeight: '800', color: '#171e19' },
+  paymentBarBg: { height: 4, backgroundColor: '#eeebe3', borderRadius: 2, overflow: 'hidden' },
+  paymentBarFill: { height: '100%', backgroundColor: '#ca0013', borderRadius: 2 },
+  paymentPct: { fontSize: 12, fontWeight: '700', color: '#6c7772', minWidth: 36, textAlign: 'right' },
 
   // Full empty
   fullEmpty: { alignItems: 'center', paddingVertical: SPACING.xxxl },
   fullEmptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
-  fullEmptyTitle: { ...TYPOGRAPHY.h3, color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  fullEmptyText: { ...TYPOGRAPHY.bodySm, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  fullEmptyTitle: { fontSize: 18, fontWeight: '700', color: '#171e19', marginBottom: SPACING.sm },
+  fullEmptyText: { fontSize: 13, color: '#6c7772', textAlign: 'center', lineHeight: 20 },
 });
+

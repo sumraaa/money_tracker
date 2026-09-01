@@ -53,7 +53,7 @@ export default function CategoryGrid({ selectedCategory, onSelectCategory, custo
         <TouchableOpacity activeOpacity={0.7} style={[styles.chip, styles.addCustomChip]}
           onPress={() => { Haptics.selectionAsync(); setShowCustomModal(true); }}>
           <Text style={styles.chipIcon}>+</Text>
-          <Text style={[styles.chipText, { color: COLORS.accent }]}>Custom</Text>
+          <Text style={[styles.chipText, { color: COLORS.accentRed, fontWeight: '700' }]}>Custom</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -91,37 +91,39 @@ export default function CategoryGrid({ selectedCategory, onSelectCategory, custo
 }
 
 const styles = StyleSheet.create({
-  container: { marginVertical: SPACING.sm },
-  sectionTitle: { ...TYPOGRAPHY.overline, color: COLORS.textMuted, marginBottom: SPACING.sm, paddingHorizontal: SPACING.xs },
+  container: { marginVertical: SPACING.xs },
+  sectionTitle: { fontSize: 10, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5, marginBottom: SPACING.xs, paddingHorizontal: SPACING.xs },
   scrollContent: { gap: SPACING.sm, paddingRight: SPACING.lg },
   chip: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bgSurface,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff',
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.pill,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
-  chipSelected: { backgroundColor: COLORS.accentMuted, borderColor: COLORS.accent },
-  addCustomChip: { borderStyle: 'dashed', borderColor: COLORS.borderAccent, backgroundColor: COLORS.accentBg },
+  chipSelected: { backgroundColor: '#171e19', borderColor: '#171e19' },
+  addCustomChip: { borderStyle: 'dashed', borderColor: '#ca0013', backgroundColor: 'rgba(202, 0, 19, 0.08)' },
   chipIcon: { fontSize: 15, marginRight: 6 },
-  chipText: { ...TYPOGRAPHY.labelSm, color: COLORS.textSecondary },
-  chipTextSelected: { color: COLORS.textPrimary, fontWeight: '700' },
+  chipText: { fontSize: 13, fontWeight: '600', color: '#6c7772' },
+  chipTextSelected: { color: '#ffffff', fontWeight: '800' },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: SPACING.xxl },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(23, 30, 25, 0.65)', justifyContent: 'center', alignItems: 'center', padding: SPACING.xxl },
   customModalContent: {
-    width: '100%', backgroundColor: COLORS.bgElevated, borderRadius: RADIUS.xl,
-    padding: SPACING.xxl, borderWidth: 1, borderColor: COLORS.borderStrong,
+    width: '100%', backgroundColor: '#ffffff', borderRadius: 32,
+    padding: SPACING.xxl, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    shadowColor: '#171e19', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8,
   },
-  customModalTitle: { ...TYPOGRAPHY.h2, color: COLORS.textPrimary, marginBottom: SPACING.lg },
+  customModalTitle: { fontSize: 20, fontWeight: '800', color: '#171e19', marginBottom: SPACING.lg },
   customInput: {
-    backgroundColor: COLORS.bgSurface, color: COLORS.textPrimary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.lg, paddingVertical: 14, ...TYPOGRAPHY.body,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, marginBottom: SPACING.lg,
+    backgroundColor: '#eeebe3', color: '#171e19', borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg, paddingVertical: 14, fontSize: 15,
+    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)', marginBottom: SPACING.lg,
   },
   iconSelector: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xl },
-  emojiBtn: { padding: SPACING.sm, borderRadius: RADIUS.sm, backgroundColor: COLORS.bgSurface },
-  emojiBtnSelected: { backgroundColor: COLORS.accentMuted, borderWidth: 1, borderColor: COLORS.accent },
+  emojiBtn: { padding: SPACING.sm, borderRadius: RADIUS.sm, backgroundColor: '#eeebe3' },
+  emojiBtnSelected: { backgroundColor: 'rgba(202, 0, 19, 0.12)', borderWidth: 1, borderColor: '#ca0013' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.md },
   cancelBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  cancelText: { ...TYPOGRAPHY.label, color: COLORS.textMuted },
-  saveBtn: { backgroundColor: COLORS.accentStrong, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, borderRadius: RADIUS.pill },
-  saveText: { ...TYPOGRAPHY.label, color: COLORS.textPrimary },
+  cancelText: { color: '#6c7772', fontWeight: '700' },
+  saveBtn: { backgroundColor: '#ca0013', paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, borderRadius: RADIUS.pill },
+  saveText: { color: '#ffffff', fontWeight: '800' },
 });
+
