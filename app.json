@@ -32,6 +32,10 @@
         "backgroundColor": "#171E19"
       },
       "package": "com.sumra.zerofriction",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -55,7 +59,14 @@
     "plugins": [
       "expo-sqlite",
       "expo-status-bar",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#171E19"
+        }
+      ]
     ],
     "owner": "sumraaa",
     "extra": {

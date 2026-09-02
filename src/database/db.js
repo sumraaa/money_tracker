@@ -255,55 +255,32 @@ export const updateExpense = async (id, params = {}) => {
   try {
     const db = await getDb();
     const safeId = Number(id);
-    if (isNaN(safeId) || safeId <= 0) throw new Error('Invalid expense ID');
-
-    const fields = [];
-    const values = [];
-
-    if (params.category !== undefined) {
-      fields.push('category = ?');
-      values.push(toSqlParam(params.category, 'Other'));
-    }
-    if (params.expense !== undefined) {
-      const num = parseFloat(params.expense);
-      if (isNaN(num) || num <= 0) throw new Error('Invalid amount');
-      fields.push('expense = ?');
-      values.push(num);
-    }
-    if (params.date_time !== undefined) {
-      fields.push('date_time = ?');
-      values.push(toSqlParam(params.date_time, new Date().toISOString()));
-    }
-    if (params.message !== undefined) {
-      fields.push('message = ?');
-      values.push(toSqlParam(params.message, ''));
-    }
-    if (params.merchant !== undefined) {
-      fields.push('merchant = ?');
-      values.push(toSqlParam(params.merchant, ''));
-    }
-    if (params.payment_method !== undefined) {
-      fields.push('payment_method = ?');
-      values.push(toSqlParam(params.payment_method, 'UPI'));
-    }
-    if (params.is_recurring !== undefined) {
-      fields.push('is_recurring = ?');
-      values.push(params.is_recurring ? 1 : 0);
+    if (isNaN(safeId) || safeId <= 0) {
+      throw new Error('Invalid expense ID.');
     }
 
-    if (fields.length === 0) return;
+    // Support both 'amount' and 'expense' field names
+    const amountVal = params.amount !== undefined ? params.amount : params.expense;
+    const parsedAmount = parseFloat(amountVal);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      throw new Error('Invalid expense amount.');
+    }
 
-    // Mark as needing re-sync after edit
-    fields.push('sync_status = 0');
-    fields.push('updated_at = ?');
-    values.push(new Date().toISOString());
-    values.push(safeId);
+    const safeCategory = toSqlParam(params.category, 'General').trim() || 'General';
+    const safeMerchant = toSqlParam(params.merchant, '').trim();
+    const safeNote = toSqlParam(params.note !== undefined ? params.note : params.message, '').trim();
+    const safePaymentMethod = toSqlParam(params.payment_method !== undefined ? params.payment_method : params.paymentMethod, 'UPI').trim() || 'UPI';
+    const safeDate = toSqlParam(params.date !== undefined ? params.date : params.date_time, new Date().toISOString());
+    const now = new Date().toISOString();
 
     await db.runAsync(
-      `UPDATE expenses SET ${fields.join(', ')} WHERE id = ?;`,
-      values
+      `UPDATE expenses 
+       SET expense = ?, category = ?, merchant = ?, message = ?, payment_method = ?, date_time = ?, sync_status = 0, updated_at = ?
+       WHERE id = ?;`,
+      [parsedAmount, safeCategory, safeMerchant, safeNote, safePaymentMethod, safeDate, now, safeId]
     );
-    console.log(`[SQLite] Expense ${safeId} updated`);
+    console.log(`[SQLite] Expense ${safeId} updated successfully.`);
+    return true;
   } catch (error) {
     console.error('[SQLite] Error updating expense:', error);
     throw error;
@@ -476,11 +453,16 @@ export const deleteExpense = async (id) => {
   try {
     const db = await getDb();
     const safeId = Number(id);
-    if (isNaN(safeId) || safeId <= 0) return;
+    if (isNaN(safeId) || safeId <= 0) {
+      console.warn('[SQLite] deleteExpense called with invalid ID:', id);
+      return false;
+    }
     await db.runAsync(`DELETE FROM expenses WHERE id = ?;`, [safeId]);
-    console.log(`[SQLite] Expense ${safeId} deleted`);
+    console.log(`[SQLite] Expense ${safeId} deleted successfully.`);
+    return true;
   } catch (error) {
     console.error('[SQLite] Error deleting expense:', error);
+    return false;
   }
 };
 

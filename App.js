@@ -13,6 +13,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import RecurringScreen from './src/screens/RecurringScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import { getUser } from './src/services/AuthService';
+import { initNotifications } from './src/services/NotificationService';
 import { emit, EventTypes } from './src/services/EventBus';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from './src/constants/theme';
 
@@ -68,6 +69,11 @@ export default function App() {
   useEffect(() => {
     checkAuth();
     startDbInit();
+
+    // Decoupled, non-blocking notification initialization
+    initNotifications().catch((e) => {
+      console.log('[App] Notification schedule notice:', e?.message || e);
+    });
 
     try {
       initSyncManager();

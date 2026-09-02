@@ -133,10 +133,38 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
     setRefreshing(false);
   };
 
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const handleLongPress = (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const label = item.merchant || item.category || 'Expense';
+    const amountStr = formatINR(parseFloat(item.expense), { showPaise: false });
+    Alert.alert(
+      label,
+      `Choose an action for this ${amountStr} transaction:`,
+      [
+        {
+          text: 'Edit Expense',
+          onPress: () => {
+            setEditingExpense(item);
+            setEditModalVisible(true);
+          },
+        },
+        {
+          text: 'Delete Expense',
+          style: 'destructive',
+          onPress: () => handleDelete(item.id, label, item.expense),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const handleDelete = (id, label, amount) => {
     Alert.alert(
       'Delete expense',
-      `Remove ${label} (${formatINR(amount)})?`,
+      `Are you sure you want to delete this ${formatINR(amount)} expense?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -145,6 +173,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             await deleteExpense(id);
+            emit(EventTypes.EXPENSE_DELETED);
             await loadData();
             if (onExpenseAdded) onExpenseAdded();
           },
@@ -183,7 +212,8 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       <TouchableOpacity
         style={styles.txRow}
         activeOpacity={0.7}
-        onLongPress={() => handleDelete(item.id, label, item.expense)}
+        onPress={() => handleLongPress(item)}
+        onLongPress={() => handleLongPress(item)}
       >
         <View style={[styles.txIconWrap, { backgroundColor: getCategoryColor(item.category) + '18' }]}>
           <Text style={styles.txIcon}>{icon}</Text>
@@ -362,6 +392,20 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onExpenseAdded={() => {
+          loadData();
+          if (onExpenseAdded) onExpenseAdded();
+        }}
+      />
+
+      {/* Edit Expense Modal */}
+      <QuickLogModal
+        visible={editModalVisible}
+        editingTransaction={editingExpense}
+        onClose={() => {
+          setEditModalVisible(false);
+          setEditingExpense(null);
+        }}
+        onExpenseUpdated={() => {
           loadData();
           if (onExpenseAdded) onExpenseAdded();
         }}

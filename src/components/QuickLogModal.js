@@ -7,14 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import CategoryGrid from './CategoryGrid';
 import Numpad from './Numpad';
-import { addExpense, getCustomCategories, addCustomCategory, getRecentMerchants } from '../database/db';
+import { addExpense, updateExpense, getCustomCategories, addCustomCategory, getRecentMerchants } from '../database/db';
 import { triggerSync } from '../services/SyncService';
 import { emit, EventTypes } from '../services/EventBus';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY, PAYMENT_METHODS, MERCHANT_HINTS } from '../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
+export default function QuickLogModal({ visible, onClose, onExpenseAdded, editingTransaction, onExpenseUpdated }) {
   const [amount, setAmount] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Food');
   const [merchant, setMerchant] = useState('');
@@ -25,14 +25,28 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const isEditing = !!editingTransaction;
   const translateY = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   useEffect(() => {
     if (visible) {
       loadData();
-      setAmount('');
-      setMerchant('');
-      setMessage('');
+      if (editingTransaction) {
+        const initialAmt = editingTransaction.expense !== undefined
+          ? String(editingTransaction.expense)
+          : String(editingTransaction.amount || '');
+        setAmount(initialAmt);
+        setSelectedCategory(editingTransaction.category || 'Food');
+        setMerchant(editingTransaction.merchant || '');
+        setMessage(editingTransaction.message || editingTransaction.note || '');
+        setPaymentMethod(editingTransaction.payment_method || editingTransaction.paymentMethod || 'UPI');
+      } else {
+        setAmount('');
+        setSelectedCategory('Food');
+        setMerchant('');
+        setMessage('');
+        setPaymentMethod('UPI');
+      }
       setShowSuccess(false);
       Animated.spring(translateY, {
         toValue: 0, useNativeDriver: true, friction: 8, tension: 50,
@@ -42,11 +56,12 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
         toValue: SCREEN_HEIGHT, duration: 200, useNativeDriver: true,
       }).start();
     }
-  }, [visible]);
+  }, [visible, editingTransaction]);
 
   const loadData = async () => {
     const [custom, merchants] = await Promise.all([
-      getCustomCategories(), getRecentMerchants(8),
+      getCustomCategories().catch(() => []),
+      getRecentMerchants(8).catch(() => []),
     ]);
     setCustomCategories(Array.isArray(custom) ? custom : []);
     setRecentMerchants(Array.isArray(merchants) ? merchants : []);
@@ -79,20 +94,46 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
     setIsSubmitting(true);
 
     try {
-      const newExpense = await addExpense({
-        category: (selectedCategory || '').trim() || 'Food',
-        expense: numericAmount,
-        date_time: new Date().toISOString(),
-        message: (message || '').trim(),
-        merchant: (merchant || '').trim(),
-        payment_method: paymentMethod,
-      });
+      if (isEditing && editingTransaction?.id) {
+        await updateExpense(editingTransaction.id, {
+          amount: numericAmount,
+          category: (selectedCategory || '').trim() || 'Food',
+          merchant: (merchant || '').trim(),
+          note: (message || '').trim(),
+          payment_method: paymentMethod,
+          date: editingTransaction.date_time || editingTransaction.date || new Date().toISOString(),
+        });
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowSuccess(true);
-      emit(EventTypes.EXPENSE_CREATED, newExpense);
-      triggerSync().catch(() => {});
-      if (onExpenseAdded) onExpenseAdded(newExpense);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setShowSuccess(true);
+        const updatedPayload = {
+          ...editingTransaction,
+          expense: numericAmount,
+          category: selectedCategory,
+          merchant,
+          message,
+          payment_method: paymentMethod,
+        };
+        emit(EventTypes.EXPENSE_UPDATED, updatedPayload);
+        emit(EventTypes.EXPENSE_CREATED, updatedPayload);
+        triggerSync().catch(() => {});
+        if (onExpenseUpdated) onExpenseUpdated(updatedPayload);
+      } else {
+        const newExpense = await addExpense({
+          category: (selectedCategory || '').trim() || 'Food',
+          expense: numericAmount,
+          date_time: new Date().toISOString(),
+          message: (message || '').trim(),
+          merchant: (merchant || '').trim(),
+          payment_method: paymentMethod,
+        });
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setShowSuccess(true);
+        emit(EventTypes.EXPENSE_CREATED, newExpense);
+        triggerSync().catch(() => {});
+        if (onExpenseAdded) onExpenseAdded(newExpense);
+      }
 
       setTimeout(() => {
         setAmount(''); setMerchant(''); setMessage('');
@@ -119,6 +160,16 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
           <SafeAreaView edges={['bottom']}>
             <View style={styles.header}>
               <View style={styles.sheetHandle} />
+              <View style={styles.titleRow}>
+                <Text style={styles.modalTitle}>
+                  {isEditing ? 'Edit Expense' : 'Log Expense'}
+                </Text>
+                {isEditing && (
+                  <View style={styles.idBadge}>
+                    <Text style={styles.idBadgeText}>#{editingTransaction.id}</Text>
+                  </View>
+                )}
+              </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                 <Text style={styles.closeBtnText}>✕</Text>
               </TouchableOpacity>
@@ -143,7 +194,7 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
               </View>
 
               {/* Recent merchants */}
-              {recentMerchants.length > 0 && !merchant && (
+              {recentMerchants.length > 0 && !merchant && !isEditing && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}
                   style={styles.suggestionsRow} contentContainerStyle={styles.suggestionsContent}>
                   {recentMerchants.map((m, i) => (
@@ -194,16 +245,21 @@ export default function QuickLogModal({ visible, onClose, onExpenseAdded }) {
               {/* Numpad */}
               <Numpad value={amount} onChange={setAmount} />
 
-              {/* Save */}
+              {/* Save / Update Button */}
               <TouchableOpacity activeOpacity={0.8}
                 disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
                 style={[styles.saveBtn,
+                  isEditing && styles.editSaveBtn,
                   (!amount || parseFloat(amount) <= 0) && styles.saveBtnDisabled,
                   showSuccess && styles.saveBtnSuccess,
                 ]}
                 onPress={handleSubmit}>
                 <Text style={styles.saveBtnText}>
-                  {showSuccess ? '✓ Saved' : isSubmitting ? 'Saving...' : `Log Expense${amount ? ` ₹${amount}` : ''}`}
+                  {showSuccess
+                    ? (isEditing ? '✓ Updated' : '✓ Saved')
+                    : isSubmitting
+                    ? (isEditing ? 'Updating...' : 'Saving...')
+                    : (isEditing ? `Update Expense${amount ? ` ₹${amount}` : ''}` : `Log Expense${amount ? ` ₹${amount}` : ''}`)}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -229,7 +285,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: { paddingBottom: SPACING.lg },
   header: { alignItems: 'center', marginBottom: SPACING.sm, position: 'relative' },
-  sheetHandle: { width: 44, height: 5, backgroundColor: '#b7c6c2', borderRadius: 3 },
+  sheetHandle: { width: 44, height: 5, backgroundColor: '#b7c6c2', borderRadius: 3, marginBottom: 8 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
+  idBadge: { backgroundColor: 'rgba(202, 0, 19, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  idBadgeText: { fontSize: 11, fontWeight: '800', color: '#ca0013' },
   closeBtn: { position: 'absolute', right: 0, top: -4, padding: SPACING.sm },
   closeBtnText: { color: '#6c7772', fontSize: 18, fontWeight: '700' },
 

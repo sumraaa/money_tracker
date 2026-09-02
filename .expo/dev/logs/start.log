@@ -649,3 +649,9 @@
 {"_e":"metro:instantiate","_t":1788010512752,"atlas":false,"workers":8,"host":"::","port":8081}
 {"_e":"metro:bundling:started","_t":1788010561608,"id":"1","platform":"android","environment":null,"entry":"index.js"}
 {"_e":"metro:bundling:done","_t":1788010572038,"id":"1","total":2511,"ms":10430.0368}
+{"_e":"root:init","_t":1788355450748,"format":"v0-jsonl","version":"57.0.18"}
+{"_e":"env:mode","_t":1788355450749,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1788355450751,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1788355451256,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1788355451528,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1788355454946,"plugins":[{"packageName":"expo-sqlite","bannerTitle":"expo-sqlite","cliBanner":false,"webpageEndpoint":"/_expo/plugins/expo-sqlite"}]}

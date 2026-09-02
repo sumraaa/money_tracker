@@ -10,6 +10,7 @@ import { COLORS, SPACING, RADIUS, TYPOGRAPHY, DEFAULT_CATEGORIES, PAYMENT_METHOD
 import { formatINR } from '../utils/money';
 import { formatShortDate, formatTime, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfLastMonth, endOfLastMonth, startOfYear, endOfYear, daysAgo } from '../utils/dates';
 import { emit, on, EventTypes } from '../services/EventBus';
+import QuickLogModal from '../components/QuickLogModal';
 
 const PERIODS = [
   { id: 'today', label: 'Today' },
@@ -62,6 +63,8 @@ export default function HistoryScreen({ onDataChanged }) {
   const [showSearch, setShowSearch] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [selectedExpense, setSelectedExpense] = useState(null);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -92,8 +95,33 @@ export default function HistoryScreen({ onDataChanged }) {
     };
   }, [loadData]);
 
+  const handleLongPress = (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const label = item.merchant || item.category || 'Expense';
+    const amountStr = formatINR(parseFloat(item.expense || 0), { showPaise: false });
+    Alert.alert(
+      label,
+      `Choose an action for this ${amountStr} transaction:`,
+      [
+        {
+          text: 'Edit Expense',
+          onPress: () => {
+            setEditingExpense(item);
+            setEditModalVisible(true);
+          },
+        },
+        {
+          text: 'Delete Expense',
+          style: 'destructive',
+          onPress: () => handleDelete(item.id, label, item.expense),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const handleDelete = (id, label, amount) => {
-    Alert.alert('Delete expense', `Remove ${label} (${formatINR(amount)})?`, [
+    Alert.alert('Delete expense', `Are you sure you want to delete this ${formatINR(amount)} expense?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
@@ -137,7 +165,7 @@ export default function HistoryScreen({ onDataChanged }) {
       <TouchableOpacity
         style={styles.txRow} activeOpacity={0.7}
         onPress={() => setSelectedExpense(item)}
-        onLongPress={() => handleDelete(item.id, label, item.expense)}
+        onLongPress={() => handleLongPress(item)}
       >
         <View style={[styles.txIconWrap, { backgroundColor: getCategoryColor(item.category) + '18' }]}>
           <Text style={styles.txIcon}>{icon}</Text>
@@ -316,6 +344,19 @@ export default function HistoryScreen({ onDataChanged }) {
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
+                  style={[styles.modalActionBtn, { backgroundColor: 'rgba(23, 30, 25, 0.05)' }]}
+                  onPress={() => {
+                    const exp = selectedExpense;
+                    setSelectedExpense(null);
+                    setEditingExpense(exp);
+                    setEditModalVisible(true);
+                  }}
+                >
+                  <Edit3 size={16} color="#171e19" />
+                  <Text style={[styles.modalActionText, { color: '#171e19' }]}>Edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[styles.modalActionBtn, styles.modalDeleteBtn]}
                   onPress={() => {
                     const exp = selectedExpense;
@@ -338,6 +379,20 @@ export default function HistoryScreen({ onDataChanged }) {
           </TouchableOpacity>
         </Modal>
       )}
+
+      {/* Edit Modal */}
+      <QuickLogModal
+        visible={editModalVisible}
+        editingTransaction={editingExpense}
+        onClose={() => {
+          setEditModalVisible(false);
+          setEditingExpense(null);
+        }}
+        onExpenseUpdated={() => {
+          loadData();
+          if (onDataChanged) onDataChanged();
+        }}
+      />
     </View>
   );
 }
