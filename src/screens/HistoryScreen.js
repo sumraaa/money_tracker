@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, Alert, ActivityIndicator, TextInput, Modal, ScrollView,
+  FlatList, ActivityIndicator, TextInput, ScrollView,
 } from 'react-native';
 import { Search, X, ChevronDown, Edit3, Copy, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -11,6 +11,7 @@ import { formatINR } from '../utils/money';
 import { formatShortDate, formatTime, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfLastMonth, endOfLastMonth, startOfYear, endOfYear, daysAgo } from '../utils/dates';
 import { emit, on, EventTypes } from '../services/EventBus';
 import QuickLogModal from '../components/QuickLogModal';
+import PaceActionSheet from '../components/PaceActionSheet';
 
 const PERIODS = [
   { id: 'today', label: 'Today' },
@@ -62,7 +63,9 @@ export default function HistoryScreen({ onDataChanged }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState(null);
-  const [selectedExpense, setSelectedExpense] = useState(null);
+
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [actionSheetTransaction, setActionSheetTransaction] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
@@ -86,54 +89,34 @@ export default function HistoryScreen({ onDataChanged }) {
     const unsub1 = on(EventTypes.EXPENSE_CREATED, loadData);
     const unsub2 = on(EventTypes.EXPENSE_UPDATED, loadData);
     const unsub3 = on(EventTypes.EXPENSE_DELETED, loadData);
-    const unsub4 = on(EventTypes.SYNC_COMPLETED, loadData);
-    const unsub5 = on(EventTypes.TAB_CHANGED, (targetTab) => {
+    const unsub4 = on(EventTypes.EXPENSES_UPDATED, loadData);
+    const unsub5 = on(EventTypes.SYNC_COMPLETED, loadData);
+    const unsub6 = on(EventTypes.TAB_CHANGED, (targetTab) => {
       if (targetTab === 'history') loadData();
     });
     return () => {
-      unsub1(); unsub2(); unsub3(); unsub4(); unsub5();
+      unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6();
     };
   }, [loadData]);
 
-  const handleLongPress = (item) => {
+  const handleTransactionPress = (item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const label = item.merchant || item.category || 'Expense';
-    const amountStr = formatINR(parseFloat(item.expense || 0), { showPaise: false });
-    Alert.alert(
-      label,
-      `Choose an action for this ${amountStr} transaction:`,
-      [
-        {
-          text: 'Edit Expense',
-          onPress: () => {
-            setEditingExpense(item);
-            setEditModalVisible(true);
-          },
-        },
-        {
-          text: 'Delete Expense',
-          style: 'destructive',
-          onPress: () => handleDelete(item.id, label, item.expense),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setActionSheetTransaction(item);
+    setActionSheetVisible(true);
   };
 
-  const handleDelete = (id, label, amount) => {
-    Alert.alert('Delete expense', `Are you sure you want to delete this ${formatINR(amount)} expense?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          await deleteExpense(id);
-          emit(EventTypes.EXPENSE_DELETED);
-          loadData();
-          if (onDataChanged) onDataChanged();
-        },
-      },
-    ]);
+  const handleDelete = async (item) => {
+    if (!item?.id) return;
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      await deleteExpense(item.id);
+      emit(EventTypes.EXPENSE_DELETED, item.id);
+      emit(EventTypes.EXPENSES_UPDATED);
+      await loadData();
+      if (onDataChanged) onDataChanged();
+    } catch (err) {
+      console.error('[HistoryScreen] Delete expense error:', err);
+    }
   };
 
   // Group by date
@@ -151,7 +134,6 @@ export default function HistoryScreen({ onDataChanged }) {
   const totalSpent = expenses.reduce((s, e) => s + parseFloat(e?.expense || 0), 0);
   const txCount = expenses.length;
   const avgPerTx = txCount > 0 ? totalSpent / txCount : 0;
-  const largest = expenses.length > 0 ? Math.max(...expenses.map(e => parseFloat(e.expense) || 0)) : 0;
 
   const renderItem = ({ item }) => {
     const icon = getCategoryIcon(item.category);
@@ -164,8 +146,8 @@ export default function HistoryScreen({ onDataChanged }) {
     return (
       <TouchableOpacity
         style={styles.txRow} activeOpacity={0.7}
-        onPress={() => setSelectedExpense(item)}
-        onLongPress={() => handleLongPress(item)}
+        onPress={() => handleTransactionPress(item)}
+        onLongPress={() => handleTransactionPress(item)}
       >
         <View style={[styles.txIconWrap, { backgroundColor: getCategoryColor(item.category) + '18' }]}>
           <Text style={styles.txIcon}>{icon}</Text>
@@ -311,76 +293,24 @@ export default function HistoryScreen({ onDataChanged }) {
         />
       )}
 
-      {selectedExpense && (
-        <Modal
-          visible={!!selectedExpense}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSelectedExpense(null)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setSelectedExpense(null)}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
-              <View style={styles.modalHeaderRow}>
-                <View style={[styles.modalIconWrap, { backgroundColor: getCategoryColor(selectedExpense.category) + '20' }]}>
-                  <Text style={{ fontSize: 24 }}>{getCategoryIcon(selectedExpense.category)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.modalTitle}>{selectedExpense.merchant || selectedExpense.category}</Text>
-                  <Text style={styles.modalSub}>{selectedExpense.category} · {formatShortDate(selectedExpense.date_time)}</Text>
-                </View>
-                <Text style={styles.modalAmount}>{formatINR(selectedExpense.expense)}</Text>
-              </View>
+      {/* Pace Action Sheet */}
+      <PaceActionSheet
+        visible={actionSheetVisible}
+        transaction={actionSheetTransaction}
+        onClose={() => {
+          setActionSheetVisible(false);
+          setActionSheetTransaction(null);
+        }}
+        onEdit={(tx) => {
+          setEditingExpense(tx);
+          setEditModalVisible(true);
+        }}
+        onDelete={(tx) => {
+          handleDelete(tx);
+        }}
+      />
 
-              {selectedExpense.message ? (
-                <View style={styles.modalNoteBox}>
-                  <Text style={styles.modalNoteLabel}>NOTE</Text>
-                  <Text style={styles.modalNoteText}>{selectedExpense.message}</Text>
-                </View>
-              ) : null}
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalActionBtn, { backgroundColor: 'rgba(23, 30, 25, 0.05)' }]}
-                  onPress={() => {
-                    const exp = selectedExpense;
-                    setSelectedExpense(null);
-                    setEditingExpense(exp);
-                    setEditModalVisible(true);
-                  }}
-                >
-                  <Edit3 size={16} color="#171e19" />
-                  <Text style={[styles.modalActionText, { color: '#171e19' }]}>Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalActionBtn, styles.modalDeleteBtn]}
-                  onPress={() => {
-                    const exp = selectedExpense;
-                    setSelectedExpense(null);
-                    handleDelete(exp.id, exp.merchant || exp.category, exp.expense);
-                  }}
-                >
-                  <Trash2 size={16} color="#ca0013" />
-                  <Text style={[styles.modalActionText, { color: '#ca0013' }]}>Delete</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalActionBtn}
-                  onPress={() => setSelectedExpense(null)}
-                >
-                  <Text style={styles.modalActionText}>Close</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-      )}
-
-      {/* Edit Modal */}
+      {/* Edit Expense Modal */}
       <QuickLogModal
         visible={editModalVisible}
         editingTransaction={editingExpense}
@@ -497,30 +427,4 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 44, marginBottom: SPACING.md, opacity: 0.5 },
   emptyTitle: { fontSize: 18, color: '#171e19', fontWeight: '700', marginBottom: SPACING.xs },
   emptySub: { fontSize: 13, color: '#6c7772', textAlign: 'center' },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(23, 30, 25, 0.65)', justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: '#ffffff', borderTopLeftRadius: 36, borderTopRightRadius: 36,
-    padding: SPACING.xxl, borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
-    shadowColor: '#171e19', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10,
-  },
-  modalHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.lg },
-  modalIconWrap: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
-  modalTitle: { fontSize: 18, color: '#171e19', fontWeight: '800' },
-  modalSub: { fontSize: 12, color: '#6c7772', marginTop: 2 },
-  modalAmount: { fontSize: 22, color: '#ca0013', fontWeight: '800' },
-  modalNoteBox: {
-    backgroundColor: '#eeebe3', padding: SPACING.md, borderRadius: 16, marginBottom: SPACING.xl,
-    borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
-  },
-  modalNoteLabel: { fontSize: 10, fontWeight: '800', color: '#6c7772', marginBottom: 2 },
-  modalNoteText: { fontSize: 14, color: '#171e19', fontWeight: '600' },
-  modalActions: { flexDirection: 'row', gap: SPACING.md, justifyContent: 'flex-end' },
-  modalActionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: SPACING.xl,
-    borderRadius: RADIUS.pill, backgroundColor: '#eeebe3', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
-  },
-  modalDeleteBtn: { backgroundColor: 'rgba(202, 0, 19, 0.08)', borderColor: 'rgba(202, 0, 19, 0.25)' },
-  modalActionText: { fontSize: 14, fontWeight: '700', color: '#171e19' },
 });
-

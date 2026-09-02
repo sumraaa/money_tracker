@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  StatusBar, FlatList, Alert, RefreshControl,
+  StatusBar, FlatList, RefreshControl,
 } from 'react-native';
 import { Settings, Plus, ChevronRight, RefreshCw, TrendingDown, TrendingUp, Shield, Wallet, Calendar } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -15,8 +15,9 @@ import { getAllExpenses, deleteExpense } from '../database/db';
 import { triggerSync } from '../services/SyncService';
 import { getTodaySpend, getMonthSpend, getMonthlyDailyAverage, getBudgetStatus, getSafeToSpendToday, getSpendingScore, getWeekSpend, getLastWeekSpend } from '../services/AnalyticsService';
 import { getUser } from '../services/AuthService';
-import { on, EventTypes } from '../services/EventBus';
+import { emit, on, EventTypes } from '../services/EventBus';
 import QuickLogModal from '../components/QuickLogModal';
+import PaceActionSheet from '../components/PaceActionSheet';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY, SHADOWS, DEFAULT_CATEGORIES } from '../constants/theme';
 import { formatINR } from '../utils/money';
 import { formatShortDate, formatTime } from '../utils/dates';
@@ -56,6 +57,11 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
   const [lastWeekData, setLastWeekData] = useState({ total: 0 });
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('Sumra');
+
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [actionSheetTransaction, setActionSheetTransaction] = useState(null);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -107,10 +113,11 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
 
     const unsub1 = on(EventTypes.BUDGET_CHANGED, loadData);
     const unsub2 = on(EventTypes.EXPENSE_DELETED, loadData);
-    const unsub3 = on(EventTypes.SYNC_COMPLETED, loadData);
-    const unsub4 = on(EventTypes.EXPENSE_CREATED, loadData);
-    const unsub5 = on(EventTypes.EXPENSE_UPDATED, loadData);
-    const unsub6 = on(EventTypes.TAB_CHANGED, (targetTab) => {
+    const unsub3 = on(EventTypes.EXPENSES_UPDATED, loadData);
+    const unsub4 = on(EventTypes.SYNC_COMPLETED, loadData);
+    const unsub5 = on(EventTypes.EXPENSE_CREATED, loadData);
+    const unsub6 = on(EventTypes.EXPENSE_UPDATED, loadData);
+    const unsub7 = on(EventTypes.TAB_CHANGED, (targetTab) => {
       if (targetTab === 'home') loadData();
     });
 
@@ -122,6 +129,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       unsub4();
       unsub5();
       unsub6();
+      unsub7();
     };
   }, [loadData]);
 
@@ -133,53 +141,24 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
     setRefreshing(false);
   };
 
-  const [editingExpense, setEditingExpense] = useState(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-
-  const handleLongPress = (item) => {
+  const handleTransactionPress = (item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const label = item.merchant || item.category || 'Expense';
-    const amountStr = formatINR(parseFloat(item.expense), { showPaise: false });
-    Alert.alert(
-      label,
-      `Choose an action for this ${amountStr} transaction:`,
-      [
-        {
-          text: 'Edit Expense',
-          onPress: () => {
-            setEditingExpense(item);
-            setEditModalVisible(true);
-          },
-        },
-        {
-          text: 'Delete Expense',
-          style: 'destructive',
-          onPress: () => handleDelete(item.id, label, item.expense),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setActionSheetTransaction(item);
+    setActionSheetVisible(true);
   };
 
-  const handleDelete = (id, label, amount) => {
-    Alert.alert(
-      'Delete expense',
-      `Are you sure you want to delete this ${formatINR(amount)} expense?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            await deleteExpense(id);
-            emit(EventTypes.EXPENSE_DELETED);
-            await loadData();
-            if (onExpenseAdded) onExpenseAdded();
-          },
-        },
-      ]
-    );
+  const handleDelete = async (item) => {
+    if (!item?.id) return;
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      await deleteExpense(item.id);
+      emit(EventTypes.EXPENSE_DELETED, item.id);
+      emit(EventTypes.EXPENSES_UPDATED);
+      await loadData();
+      if (onExpenseAdded) onExpenseAdded();
+    } catch (err) {
+      console.error('[HomeScreen] Delete expense error:', err);
+    }
   };
 
   const openLog = () => {
@@ -212,8 +191,8 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       <TouchableOpacity
         style={styles.txRow}
         activeOpacity={0.7}
-        onPress={() => handleLongPress(item)}
-        onLongPress={() => handleLongPress(item)}
+        onPress={() => handleTransactionPress(item)}
+        onLongPress={() => handleTransactionPress(item)}
       >
         <View style={[styles.txIconWrap, { backgroundColor: getCategoryColor(item.category) + '18' }]}>
           <Text style={styles.txIcon}>{icon}</Text>
@@ -408,6 +387,23 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
         onExpenseUpdated={() => {
           loadData();
           if (onExpenseAdded) onExpenseAdded();
+        }}
+      />
+
+      {/* Pace Action Sheet */}
+      <PaceActionSheet
+        visible={actionSheetVisible}
+        transaction={actionSheetTransaction}
+        onClose={() => {
+          setActionSheetVisible(false);
+          setActionSheetTransaction(null);
+        }}
+        onEdit={(tx) => {
+          setEditingExpense(tx);
+          setEditModalVisible(true);
+        }}
+        onDelete={(tx) => {
+          handleDelete(tx);
         }}
       />
     </View>
