@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, BarChart2, Plus, Clock } from 'lucide-react-native';
+import { Home, BarChart2, Plus, Repeat, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, ANIMATION } from '../constants/theme';
+import { ANIMATION } from '../constants/theme';
 
 export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress }) {
   const insets = useSafeAreaInsets();
@@ -11,6 +11,7 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
 
   const homeScale = useRef(new Animated.Value(1)).current;
   const analyticsScale = useRef(new Animated.Value(1)).current;
+  const recurringScale = useRef(new Animated.Value(1)).current;
   const historyScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -23,6 +24,13 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
 
     Animated.spring(analyticsScale, {
       toValue: activeTab === 'analytics' ? 1.1 : 1,
+      useNativeDriver: true,
+      friction: ANIMATION.spring.friction,
+      tension: ANIMATION.spring.tension,
+    }).start();
+
+    Animated.spring(recurringScale, {
+      toValue: activeTab === 'recurring' ? 1.1 : 1,
       useNativeDriver: true,
       friction: ANIMATION.spring.friction,
       tension: ANIMATION.spring.tension,
@@ -53,7 +61,7 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
 
   return (
     <View style={[styles.floatingContainer, { bottom: bottomMargin }]}>
-      {/* Home Tab */}
+      {/* Slot 1: Home Tab (Left Outer) */}
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.tabBtn}
@@ -74,7 +82,7 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
         </Animated.View>
       </TouchableOpacity>
 
-      {/* Analytics Tab */}
+      {/* Slot 2: Analytics Tab (Left Inner) */}
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.tabBtn}
@@ -95,18 +103,39 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
         </Animated.View>
       </TouchableOpacity>
 
-      {/* Elevated Cutout Center Action Button (+ / Quick Log) */}
-      <View style={styles.fabSlot}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={styles.centerFab}
-          onPress={handleQuickLog}
-        >
+      {/* Slot 3: Quick Log FAB (+) (Dead Center) */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={styles.fabBtn}
+        onPress={handleQuickLog}
+      >
+        <View style={styles.centerFab}>
           <Plus size={26} color="#ffffff" strokeWidth={2.6} />
-        </TouchableOpacity>
-      </View>
+        </View>
+      </TouchableOpacity>
 
-      {/* History Tab */}
+      {/* Slot 4: Subscriptions & Bills Tab (Right Inner) */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.tabBtn}
+        onPress={() => handleTabPress('recurring')}
+      >
+        <Animated.View
+          style={[
+            styles.iconWrap,
+            activeTab === 'recurring' && styles.activeIconWrap,
+            { transform: [{ scale: recurringScale }] },
+          ]}
+        >
+          <Repeat
+            size={22}
+            color={activeTab === 'recurring' ? '#ffffff' : '#b7c6c2'}
+            strokeWidth={activeTab === 'recurring' ? 2.4 : 1.8}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+
+      {/* Slot 5: History Tab (Right Outer) */}
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.tabBtn}
@@ -133,14 +162,14 @@ export default function CustomTabBar({ activeTab, onTabPress, onQuickLogPress })
 const styles = StyleSheet.create({
   floatingContainer: {
     position: 'absolute',
-    left: 20,
-    right: 20,
-    height: 64,
+    left: 18,
+    right: 18,
+    height: 66,
     backgroundColor: '#171e19',
-    borderRadius: 32,
+    borderRadius: 36,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     shadowColor: '#171e19',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -149,6 +178,12 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  fabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -164,19 +199,14 @@ const styles = StyleSheet.create({
   activeIconWrap: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  fabSlot: {
-    width: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   centerFab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: '#ca0013',
-    transform: [{ translateY: -20 }],
     borderWidth: 4,
     borderColor: '#eeebe3',
+    transform: [{ translateY: -22 }],
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#ca0013',
@@ -186,5 +216,3 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
-
-

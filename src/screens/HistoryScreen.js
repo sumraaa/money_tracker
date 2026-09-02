@@ -216,6 +216,7 @@ export default function HistoryScreen({ onDataChanged }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.periodScrollView}
         contentContainerStyle={styles.periodRow}
       >
         {PERIODS.map((p) => (
@@ -366,9 +367,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
   },
 
+  periodScrollView: {
+    flexGrow: 0,
+    marginBottom: 12,
+  },
   periodRow: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   periodChip: {
     height: 38,
@@ -388,7 +393,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, marginHorizontal: 20,
-    marginVertical: SPACING.xs, backgroundColor: '#ffffff', borderRadius: 24,
+    marginBottom: 16, alignSelf: 'stretch', backgroundColor: '#ffffff', borderRadius: 24,
     borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
   },

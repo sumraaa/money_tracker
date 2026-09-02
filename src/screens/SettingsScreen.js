@@ -8,17 +8,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal, Alert, Share, Platform,
+  TextInput, Modal, Alert, Platform, ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft, Cloud, Wallet, Download, Upload, Info,
-  ChevronRight, Shield, Trash2, Database, Repeat,
+  ChevronRight, Shield, Trash2, Database, Repeat, FileText, FileSpreadsheet,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { setScriptUrl, getScriptUrl, triggerSync } from '../services/SyncService';
-import { getBudgets, setBudget, exportAllExpenses, getUnsyncedExpenses } from '../database/db';
+import { getBudgets, setBudget, getUnsyncedExpenses } from '../database/db';
 import { getBudgetStatus } from '../services/AnalyticsService';
+import { exportPdfStatement, exportWordStatement } from '../services/StatementExportService';
 import { formatINR } from '../utils/money';
 import { emit, EventTypes } from '../services/EventBus';
 
@@ -29,6 +30,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
   const [budgetAmount, setBudgetAmount] = useState('');
   const [currentBudget, setCurrentBudget] = useState(null);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -81,34 +83,43 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
     ]);
   };
 
-  const handleExport = async (format = 'csv') => {
+  const handleExportPdf = async () => {
+    if (exporting) return;
     try {
-      const expenses = await exportAllExpenses();
-      if (!expenses || expenses.length === 0) {
-        Alert.alert('No data', 'No expenses to export.');
-        return;
-      }
-
-      let content;
-      let title;
-
-      if (format === 'json') {
-        content = JSON.stringify(expenses, null, 2);
-        title = 'Zero Friction — Expenses (JSON)';
+      setExporting(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const res = await exportPdfStatement();
+      if (res && res.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (res && res.reason) {
+        Alert.alert('No Data', res.reason);
       } else {
-        const headers = 'ID,Category,Amount,Date,Merchant,Note,Payment Method,Synced\n';
-        const rows = expenses.map((e) =>
-          `${e.id},"${(e.category || '').replace(/"/g, '""')}",${e.expense},"${e.date_time}","${(e.merchant || '').replace(/"/g, '""')}","${(e.message || '').replace(/"/g, '""')}","${e.payment_method || ''}",${e.sync_status === 1 ? 'Yes' : 'No'}`
-        ).join('\n');
-        content = headers + rows;
-        title = 'Zero Friction — Expenses (CSV)';
+        Alert.alert('Export Failed', res?.error || 'Could not generate PDF statement.');
       }
-
-      await Share.share({ message: content, title });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
-      console.error('[Settings] Export error:', e);
-      Alert.alert('Export failed', 'Could not export data. Please try again.');
+      Alert.alert('Export Error', 'An error occurred generating PDF.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    if (exporting) return;
+    try {
+      setExporting(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const res = await exportWordStatement();
+      if (res && res.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (res && res.reason) {
+        Alert.alert('No Data', res.reason);
+      } else {
+        Alert.alert('Export Failed', res?.error || 'Could not generate Word document.');
+      }
+    } catch (e) {
+      Alert.alert('Export Error', 'An error occurred generating Word document.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -215,20 +226,20 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         </View>
 
         {/* Data Section */}
-        <Text style={styles.sectionLabel}>DATA & BACKUP</Text>
+        <Text style={styles.sectionLabel}>DATA & STATEMENT EXPORT</Text>
         <View style={styles.sectionCard}>
           <SettingRow
-            icon={<Download size={18} color="#ca0013" />}
-            label="Export as CSV"
-            value="Share expense data"
-            onPress={() => handleExport('csv')}
+            icon={<FileText size={18} color="#ca0013" />}
+            label="Export Statement (PDF)"
+            value="High-resolution financial document with charts/tables"
+            onPress={handleExportPdf}
           />
           <View style={styles.divider} />
           <SettingRow
-            icon={<Download size={18} color="#ca0013" />}
-            label="Export as JSON"
-            value="Full data backup"
-            onPress={() => handleExport('json')}
+            icon={<FileSpreadsheet size={18} color="#ca0013" />}
+            label="Export Document (Word .doc)"
+            value="Formatted office document for desktop/mobile editing"
+            onPress={handleExportWord}
           />
         </View>
 

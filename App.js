@@ -22,7 +22,6 @@ export default function App() {
     setActiveTab(tab);
     emit(EventTypes.TAB_CHANGED, tab);
   };
-  const [showRecurring, setShowRecurring] = useState(false);
   const [globalQuickLog, setGlobalQuickLog] = useState(false);
   const [syncStatus, setSyncStatus] = useState({
     isSyncing: false,
@@ -68,10 +67,6 @@ export default function App() {
         setGlobalQuickLog(false);
         return true;
       }
-      if (showRecurring) {
-        setShowRecurring(false);
-        return true;
-      }
       if (showSettings) {
         setShowSettings(false);
         return true;
@@ -89,7 +84,7 @@ export default function App() {
       unsubscribeSync();
       backHandler.remove();
     };
-  }, [showRecurring, showSettings, activeTab, globalQuickLog, startDbInit]);
+  }, [showSettings, activeTab, globalQuickLog, startDbInit]);
 
   const handleExpenseAdded = () => {
     setRefreshToken((t) => t + 1);
@@ -118,17 +113,15 @@ export default function App() {
       );
     }
 
-    // Recurring / Subscription screen overlay
-    if (showRecurring) {
-      return <RecurringScreen onBack={() => setShowRecurring(false)} />;
-    }
-
     // Settings overlay
     if (showSettings) {
       return (
         <SettingsScreen
           onBack={() => setShowSettings(false)}
-          onOpenRecurring={() => setShowRecurring(true)}
+          onOpenRecurring={() => {
+            setShowSettings(false);
+            setActiveTab('recurring');
+          }}
         />
       );
     }
@@ -145,6 +138,13 @@ export default function App() {
         );
       case 'analytics':
         return <AnalyticsScreen key={`analytics-${refreshToken}`} />;
+      case 'recurring':
+        return (
+          <RecurringScreen
+            key={`recurring-${refreshToken}`}
+            onBack={() => setActiveTab('home')}
+          />
+        );
       case 'history':
         return (
           <HistoryScreen
@@ -157,7 +157,7 @@ export default function App() {
     }
   };
 
-  const hideTabBar = !dbReady || showSettings || showRecurring;
+  const hideTabBar = !dbReady || showSettings;
 
   return (
     <ErrorBoundary>
