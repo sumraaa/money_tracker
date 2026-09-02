@@ -24,7 +24,7 @@ export class ErrorBoundary extends React.Component {
           <Text style={styles.icon}>⚡</Text>
           <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.sub}>
-            Zero Friction encountered a visual rendering error. Your expense data remains 100% safe.
+            Pace encountered a visual rendering error. Your expense data remains 100% safe.
           </Text>
           <TouchableOpacity style={styles.btn} onPress={this.handleRestart} activeOpacity={0.8}>
             <Text style={styles.btnText}>Reload Application</Text>

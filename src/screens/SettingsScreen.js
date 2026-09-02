@@ -248,7 +248,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <View style={styles.sectionCard}>
           <SettingRow
             icon={<Info size={18} color="#6c7772" />}
-            label="Zero Friction"
+            label="Pace"
             value="v1.0.0 • Offline Personal Financial OS"
             showChevron={false}
           />
@@ -262,7 +262,7 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         </View>
 
         <Text style={styles.footer}>
-          Zero Friction • Personal Financial Operating System{'\n'}
+          Pace • Personal Financial Operating System{'\n'}
           Your financial data remains private on your device.
         </Text>
       </ScrollView>

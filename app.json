@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Zero Friction Expense",
-    "slug": "zero-friction-expense",
+    "name": "Pace",
+    "slug": "pace",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#09090B",
+    "backgroundColor": "#171E19",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#09090B"
+      "backgroundColor": "#171E19"
     },
     "scheme": "exp-tracker",
     "ios": {
@@ -29,7 +29,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#09090B"
+        "backgroundColor": "#171E19"
       },
       "package": "com.sumra.zerofriction",
       "intentFilters": [

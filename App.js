@@ -108,7 +108,7 @@ export default function App() {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.accentRed} />
-          <Text style={styles.loadingText}>Zero Friction</Text>
+          <Text style={styles.loadingText}>Pace</Text>
         </View>
       );
     }
