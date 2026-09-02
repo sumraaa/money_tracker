@@ -376,9 +376,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   periodChip: {
-    height: 38,
+    height: 36,
     paddingHorizontal: 16,
-    borderRadius: 19,
+    borderRadius: 18,
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, marginHorizontal: 20,
-    marginBottom: 16, alignSelf: 'stretch', backgroundColor: '#ffffff', borderRadius: 24,
+    marginBottom: 12, alignSelf: 'stretch', backgroundColor: '#ffffff', borderRadius: 24,
     borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
   },

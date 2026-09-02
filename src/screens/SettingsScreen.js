@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 110 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 140 },
 
   sectionLabel: {
     fontSize: 11, fontWeight: '800', color: '#6c7772', letterSpacing: 1.5,

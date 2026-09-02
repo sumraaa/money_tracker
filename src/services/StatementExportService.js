@@ -1,6 +1,6 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import { exportAllExpenses } from '../database/db';
 import { formatINR } from '../utils/money';
 
@@ -323,16 +323,20 @@ export async function exportPdfStatement() {
     }
 
     const metrics = calculateStatementMetrics(expenses);
-    const html = buildHtmlStatement(expenses, metrics, false);
+    const statementHtml = buildHtmlStatement(expenses, metrics, false);
 
-    const { uri } = await Print.printToFileAsync({ html });
-    const pdfPath = FileSystem.documentDirectory + 'Pace_Statement.pdf';
-    await FileSystem.copyAsync({ from: uri, to: pdfPath }).catch(() => {});
+    const file = await Print.printToFileAsync({ html: statementHtml });
+    if (!file || !file.uri) throw new Error("Failed to generate PDF file.");
+    let pdfUri = file.uri;
+    if (!pdfUri.startsWith('file://')) pdfUri = `file://${pdfUri}`;
 
-    await Sharing.shareAsync(pdfPath || uri, {
-      UTI: '.pdf',
+    const canShare = await Sharing.isAvailableAsync();
+    if (!canShare) throw new Error("Sharing is unavailable on this device.");
+
+    await Sharing.shareAsync(pdfUri, {
       mimeType: 'application/pdf',
-      dialogTitle: 'Share Pace PDF Financial Statement',
+      dialogTitle: 'Share Pace Statement (PDF)',
+      UTI: '.pdf'
     });
 
     return { success: true };
@@ -353,16 +357,22 @@ export async function exportWordStatement() {
     }
 
     const metrics = calculateStatementMetrics(expenses);
-    const htmlContent = buildHtmlStatement(expenses, metrics, true);
+    const statementHtml = buildHtmlStatement(expenses, metrics, true);
 
-    const docPath = FileSystem.documentDirectory + 'Pace_Statement.doc';
-    await FileSystem.writeAsStringAsync(docPath, htmlContent, {
-      encoding: FileSystem.EncodingType.UTF8,
+    const docUri = `${FileSystem.cacheDirectory}Pace_Financial_Statement.doc`;
+    await FileSystem.writeAsStringAsync(docUri, statementHtml, {
+      encoding: FileSystem.EncodingType.UTF8
     });
 
-    await Sharing.shareAsync(docPath, {
+    let shareDocUri = docUri.startsWith('file://') ? docUri : `file://${docUri}`;
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (!canShare) throw new Error("Sharing is unavailable on this device.");
+
+    await Sharing.shareAsync(shareDocUri, {
       mimeType: 'application/msword',
-      dialogTitle: 'Share Pace Word Financial Statement',
+      dialogTitle: 'Share Pace Statement (Word)',
+      UTI: 'com.microsoft.word.doc'
     });
 
     return { success: true };

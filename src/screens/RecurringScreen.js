@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 110 },
+  scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 140 },
 
   heroCard: {
     backgroundColor: '#ffffff', borderRadius: 32, padding: SPACING.xl,

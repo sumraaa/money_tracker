@@ -57,6 +57,7 @@
       "expo-status-bar",
       "expo-sharing"
     ],
+    "owner": "sumraaa",
     "extra": {
       "eas": {
         "projectId": "a218ac8d-1b29-4e82-82a5-37e444a1a970"
