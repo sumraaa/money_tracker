@@ -14,6 +14,7 @@ import * as Linking from 'expo-linking';
 import { getAllExpenses, deleteExpense } from '../database/db';
 import { triggerSync } from '../services/SyncService';
 import { getTodaySpend, getMonthSpend, getMonthlyDailyAverage, getBudgetStatus, getSafeToSpendToday, getSpendingScore, getWeekSpend, getLastWeekSpend } from '../services/AnalyticsService';
+import { getUser } from '../services/AuthService';
 import { on, EventTypes } from '../services/EventBus';
 import QuickLogModal from '../components/QuickLogModal';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY, SHADOWS, DEFAULT_CATEGORIES } from '../constants/theme';
@@ -54,10 +55,11 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
   const [weekData, setWeekData] = useState({ total: 0 });
   const [lastWeekData, setLastWeekData] = useState({ total: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [userName, setUserName] = useState('Sumra');
 
   const loadData = useCallback(async () => {
     try {
-      const [exps, today, month, avg, budgetData, safe, week, lastWeek] = await Promise.all([
+      const [exps, today, month, avg, budgetData, safe, week, lastWeek, userData] = await Promise.all([
         getAllExpenses({ limit: 15, sortBy: 'date_time', sortOrder: 'DESC' }),
         getTodaySpend().catch(() => ({ total: 0 })),
         getMonthSpend().catch(() => ({ total: 0 })),
@@ -66,6 +68,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
         getSafeToSpendToday().catch(() => null),
         getWeekSpend().catch(() => ({ total: 0 })),
         getLastWeekSpend().catch(() => ({ total: 0 })),
+        getUser().catch(() => ({ name: 'Sumra' })),
       ]);
       setExpenses(exps);
       setTodayTotal(today.total);
@@ -75,6 +78,9 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       setSafeToSpend(safe);
       setWeekData(week);
       setLastWeekData(lastWeek);
+      if (userData?.name) {
+        setUserName(userData.name);
+      }
     } catch (e) {
       console.error('[Home] load error:', e);
     }
@@ -117,7 +123,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       unsub5();
       unsub6();
     };
-  }, []);
+  }, [loadData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -165,6 +171,8 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
     ? ((weekData.total - lastWeekData.total) / lastWeekData.total) * 100
     : null;
 
+  const initial = (userName?.trim()?.charAt(0) || 'P').toUpperCase();
+
   const renderExpenseItem = ({ item }) => {
     const icon = getCategoryIcon(item.category);
     const label = item.merchant || item.category || 'Expense';
@@ -205,7 +213,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.greetingLabel}>{getGreeting()}</Text>
-          <Text style={styles.userName}>Hi, Sumra!</Text>
+          <Text style={styles.userName}>Hi, {userName || 'Sumra'}!</Text>
           <View style={styles.datePill}>
             <Text style={styles.datePillText}>
               📅 {dateStr}
@@ -220,7 +228,7 @@ export default function HomeScreen({ syncStatus, onExpenseAdded, onOpenSettings,
           onPress={onOpenSettings}
         >
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>S</Text>
+            <Text style={styles.profileAvatarText}>{initial}</Text>
           </View>
           <View style={[
             styles.profileStatusDot,

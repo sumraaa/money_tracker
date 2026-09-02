@@ -49,7 +49,7 @@ function calculateStatementMetrics(expenses) {
 
   // Date range
   const dates = expenses
-    .map((e) => e.date_time ? new Date(e.date_time) : null)
+    .map((e) => (e.date_time ? new Date(e.date_time) : null))
     .filter(Boolean)
     .sort((a, b) => a.getTime() - b.getTime());
 
@@ -69,7 +69,7 @@ function calculateStatementMetrics(expenses) {
 /**
  * Builds high-resolution, publication-grade HTML content for PDF & Word exports.
  */
-function buildHtmlStatement(expenses, metrics, isWord = false) {
+function buildHtmlStatement(expenses, metrics, isWord = false, userName = 'User') {
   const generatedTime = new Date().toLocaleString('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -251,7 +251,7 @@ function buildHtmlStatement(expenses, metrics, isWord = false) {
           <tr>
             <td class="header-meta-td">
               <div class="meta-label">Account Holder</div>
-              <div class="meta-value">Sumra</div>
+              <div class="meta-value">${userName}</div>
             </td>
             <td class="header-meta-td">
               <div class="meta-label">Statement Period</div>
@@ -315,36 +315,45 @@ function buildHtmlStatement(expenses, metrics, isWord = false) {
 /**
  * Generates and shares executive PDF statement.
  */
-export async function exportPdfStatement() {
+export async function exportPDFStatement() {
   try {
     const expenses = await exportAllExpenses();
     if (!expenses || expenses.length === 0) {
-      return { success: false, reason: 'No expenses available to export.' };
+      throw new Error('No expenses available to export.');
     }
 
     const metrics = calculateStatementMetrics(expenses);
     const statementHtml = buildHtmlStatement(expenses, metrics, false);
 
     const file = await Print.printToFileAsync({ html: statementHtml });
-    if (!file || !file.uri) throw new Error("Failed to generate PDF file.");
+    if (!file || !file.uri) {
+      throw new Error("Failed to generate PDF file: file URI is undefined.");
+    }
     let pdfUri = file.uri;
-    if (!pdfUri.startsWith('file://')) pdfUri = `file://${pdfUri}`;
+    if (!pdfUri.startsWith('file://')) {
+      pdfUri = `file://${pdfUri}`;
+    }
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (!canShare) throw new Error("Sharing is unavailable on this device.");
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      throw new Error("Sharing is unavailable on this device.");
+    }
 
     await Sharing.shareAsync(pdfUri, {
       mimeType: 'application/pdf',
       dialogTitle: 'Share Pace Statement (PDF)',
-      UTI: '.pdf'
+      UTI: '.pdf',
     });
 
     return { success: true };
   } catch (error) {
     console.error('[StatementExportService] PDF export error:', error);
-    return { success: false, error: error?.message || 'Failed to generate PDF statement' };
+    throw new Error(`PDF Statement Export Failed: ${error?.message || 'Unknown error'}`);
   }
 }
+
+// Alias for backwards compatibility if needed
+export const exportPdfStatement = exportPDFStatement;
 
 /**
  * Generates and shares formatted Microsoft Word (.doc) statement.
@@ -353,31 +362,34 @@ export async function exportWordStatement() {
   try {
     const expenses = await exportAllExpenses();
     if (!expenses || expenses.length === 0) {
-      return { success: false, reason: 'No expenses available to export.' };
+      throw new Error('No expenses available to export.');
     }
 
     const metrics = calculateStatementMetrics(expenses);
     const statementHtml = buildHtmlStatement(expenses, metrics, true);
 
-    const docUri = `${FileSystem.cacheDirectory}Pace_Financial_Statement.doc`;
-    await FileSystem.writeAsStringAsync(docUri, statementHtml, {
-      encoding: FileSystem.EncodingType.UTF8
+    const docPath = `${FileSystem.cacheDirectory}Pace_Statement.doc`;
+    await FileSystem.writeAsStringAsync(docPath, statementHtml, {
+      encoding: FileSystem.EncodingType.UTF8,
     });
 
-    let shareDocUri = docUri.startsWith('file://') ? docUri : `file://${docUri}`;
+    const shareDocUri = docPath.startsWith('file://') ? docPath : `file://${docPath}`;
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (!canShare) throw new Error("Sharing is unavailable on this device.");
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      throw new Error("Sharing is unavailable on this device.");
+    }
 
     await Sharing.shareAsync(shareDocUri, {
       mimeType: 'application/msword',
       dialogTitle: 'Share Pace Statement (Word)',
-      UTI: 'com.microsoft.word.doc'
+      UTI: '.doc',
     });
 
     return { success: true };
   } catch (error) {
     console.error('[StatementExportService] Word export error:', error);
-    return { success: false, error: error?.message || 'Failed to generate Word document' };
+    throw new Error(`Word Statement Export Failed: ${error?.message || 'Unknown error'}`);
   }
 }
+

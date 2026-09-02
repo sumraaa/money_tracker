@@ -12,18 +12,19 @@ import {
 } from 'react-native';
 import {
   ArrowLeft, Cloud, Wallet, Download, Upload, Info,
-  ChevronRight, Shield, Trash2, Database, Repeat, FileText, FileSpreadsheet,
+  ChevronRight, Shield, Trash2, Database, Repeat, FileText, FileSpreadsheet, LogOut, User,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
 import { setScriptUrl, getScriptUrl, triggerSync } from '../services/SyncService';
 import { getBudgets, setBudget, getUnsyncedExpenses } from '../database/db';
 import { getBudgetStatus } from '../services/AnalyticsService';
+import { getUser, logout } from '../services/AuthService';
 import { exportPdfStatement, exportWordStatement } from '../services/StatementExportService';
 import { formatINR } from '../utils/money';
 import { emit, EventTypes } from '../services/EventBus';
 
-export default function SettingsScreen({ onBack, onOpenRecurring }) {
+export default function SettingsScreen({ onBack, onOpenRecurring, onLogout }) {
   const [scriptUrl, setUrl] = useState(getScriptUrl());
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
@@ -31,21 +32,24 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
   const [currentBudget, setCurrentBudget] = useState(null);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [userData, setUserData] = useState({ name: 'User', phone: '' });
 
   const loadData = useCallback(async () => {
     try {
-      const [budget, unsynced] = await Promise.all([
+      const [budget, unsynced, user] = await Promise.all([
         getBudgetStatus().catch(() => ({ hasOverallBudget: false })),
         getUnsyncedExpenses().catch(() => []),
+        getUser().catch(() => ({ name: 'User', phone: '' })),
       ]);
       setCurrentBudget(budget);
       setUnsyncedCount(unsynced.length);
+      setUserData(user);
     } catch (e) {
       console.error('[Settings] load error:', e);
     }
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleSaveSync = () => {
     setScriptUrl(scriptUrl);
@@ -81,6 +85,27 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         },
       },
     ]);
+  };
+
+  const handleLogoutPress = () => {
+    Alert.alert(
+      'Log out of Pace?',
+      'Are you sure you want to log out? Your local offline data remains safe on this device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await logout();
+            if (onLogout) {
+              onLogout();
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleExportPdf = async () => {
@@ -151,6 +176,10 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
     </TouchableOpacity>
   );
 
+  const identityChipText = userData.phone
+    ? `${userData.name} • ${userData.phone}`
+    : userData.name;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -158,7 +187,13 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <ArrowLeft size={20} color="#171e19" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={styles.identityChip}>
+            <User size={12} color="#ca0013" />
+            <Text style={styles.identityChipText}>{identityChipText}</Text>
+          </View>
+        </View>
         <View style={{ width: 44 }} />
       </View>
 
@@ -261,6 +296,18 @@ export default function SettingsScreen({ onBack, onOpenRecurring }) {
           />
         </View>
 
+        {/* Log Out Section Card */}
+        <Text style={styles.sectionLabel}>ACCOUNT</Text>
+        <View style={styles.logoutCard}>
+          <SettingRow
+            icon={<LogOut size={18} color="#ca0013" />}
+            label="Log Out"
+            value="Sign out of your local vault identity"
+            onPress={handleLogoutPress}
+            danger
+          />
+        </View>
+
         <Text style={styles.footer}>
           Pace • Personal Financial Operating System{'\n'}
           Your financial data remains private on your device.
@@ -359,7 +406,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#171e19', letterSpacing: -0.5 },
+  identityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(202, 0, 19, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 4,
+    gap: 4,
+  },
+  identityChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#171e19',
+  },
+  logoutCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(202, 0, 19, 0.3)',
+    overflow: 'hidden',
+    shadowColor: '#ca0013',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.xl, paddingBottom: 140 },

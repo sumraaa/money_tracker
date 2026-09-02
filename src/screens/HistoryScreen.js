@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff',
-    justify: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(183, 198, 194, 0.35)',
     shadowColor: '#171e19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
 

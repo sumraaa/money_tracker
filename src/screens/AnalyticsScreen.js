@@ -130,28 +130,23 @@ export default function AnalyticsScreen() {
       </View>
 
       {/* Spending Summary Banner */}
-      {summary && summary.total > 0 && (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryHeadline}>
-            You spent {formatINR(summary.total, { showPaise: false })} {summary.period}.
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryHeadline}>
+          {"You spent ₹" + Number(totalSpent || 0).toLocaleString('en-IN') + " this " + timeframe + "."}
+        </Text>
+        {burnRate.pct !== null ? (
+          <Text style={[styles.summaryChange,
+            burnRate.direction === 'down' ? { color: COLORS.success } :
+            burnRate.direction === 'up' ? { color: COLORS.warning } : { color: COLORS.textMuted }
+          ]}>
+            {burnRate.direction === 'down' ? '↓' : burnRate.direction === 'up' ? '↑' : ''} {burnRate.pct}% {burnRate.direction === 'down' ? 'decrease' : burnRate.direction === 'up' ? 'increase' : 'change'} compared to previous {timeframe}
           </Text>
-          {summary.topCategories && summary.topCategories.length > 0 && (
-            <View style={styles.summaryCategories}>
-              {summary.topCategories.map((c, i) => (
-                <View key={i} style={styles.summaryCatRow}>
-                  <Text style={styles.summaryCatName}>{c.name}</Text>
-                  <Text style={styles.summaryCatAmount}>{formatINR(c.total, { showPaise: false })}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          {summary.changePercent !== null && (
-            <Text style={[styles.summaryChange, summary.changePercent <= 0 ? { color: COLORS.success } : { color: COLORS.warning }]}>
-              {summary.changePercent <= 0 ? '↓' : '↑'} {Math.abs(summary.changePercent).toFixed(0)}% {summary.direction} than last week
-            </Text>
-          )}
-        </View>
-      )}
+        ) : (
+          <Text style={styles.summaryChangeMuted}>
+            Track more expenses to view period-over-period trends.
+          </Text>
+        )}
+      </View>
 
       {/* Hero Metric Card */}
       <View style={styles.heroCard}>
@@ -359,6 +354,7 @@ const styles = StyleSheet.create({
   summaryCatName: { fontSize: 14, color: '#6c7772', fontWeight: '500' },
   summaryCatAmount: { fontSize: 14, fontWeight: '700', color: '#171e19' },
   summaryChange: { fontSize: 13, fontWeight: '700', marginTop: SPACING.xs },
+  summaryChangeMuted: { fontSize: 12, fontWeight: '500', color: '#6c7772', marginTop: SPACING.xs },
 
   // Hero Card
   heroCard: {

@@ -11,10 +11,15 @@ import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import RecurringScreen from './src/screens/RecurringScreen';
+import LoginScreen from './src/screens/LoginScreen';
+import { getUser } from './src/services/AuthService';
 import { emit, EventTypes } from './src/services/EventBus';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from './src/constants/theme';
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
   const [activeTab, setActiveTab] = useState('home');
   const [showSettings, setShowSettings] = useState(false);
 
@@ -31,6 +36,18 @@ export default function App() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState(null);
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const user = await getUser();
+      setIsLoggedIn(user.isLoggedIn);
+    } catch (e) {
+      console.error('[App] Auth check error:', e);
+      setIsLoggedIn(false);
+    } finally {
+      setLoadingAuth(false);
+    }
+  }, []);
 
   const startDbInit = useCallback(async () => {
     setDbError(null);
@@ -49,6 +66,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    checkAuth();
     startDbInit();
 
     try {
@@ -84,10 +102,16 @@ export default function App() {
       unsubscribeSync();
       backHandler.remove();
     };
-  }, [showSettings, activeTab, globalQuickLog, startDbInit]);
+  }, [showSettings, activeTab, globalQuickLog, startDbInit, checkAuth]);
 
   const handleExpenseAdded = () => {
     setRefreshToken((t) => t + 1);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setShowSettings(false);
+    setActiveTab('home');
   };
 
   const renderScreen = () => {
@@ -104,13 +128,17 @@ export default function App() {
       );
     }
 
-    if (!dbReady) {
+    if (!dbReady || loadingAuth) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.accentRed} />
           <Text style={styles.loadingText}>Pace</Text>
         </View>
       );
+    }
+
+    if (!isLoggedIn) {
+      return <LoginScreen onLoginSuccess={() => setIsLoggedIn(true)} />;
     }
 
     // Settings overlay
@@ -122,6 +150,7 @@ export default function App() {
             setShowSettings(false);
             setActiveTab('recurring');
           }}
+          onLogout={handleLogout}
         />
       );
     }
@@ -157,7 +186,7 @@ export default function App() {
     }
   };
 
-  const hideTabBar = !dbReady || showSettings;
+  const hideTabBar = !dbReady || loadingAuth || !isLoggedIn || showSettings;
 
   return (
     <ErrorBoundary>
@@ -182,6 +211,7 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
 const styles = StyleSheet.create({
   root: {

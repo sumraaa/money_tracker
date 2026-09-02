@@ -188,56 +188,7 @@ export const initDatabase = async () => {
       }
     }
 
-    // Check if expenses table has 0 rows and seed historical records
-    const countResult = await db.getFirstAsync(`SELECT COUNT(*) as count FROM expenses;`);
-    const count = countResult?.count ?? 0;
-
-    if (count === 0) {
-      console.log('[SQLite] Expenses table is empty. Seeding historical transactions...');
-      const seedData = [
-        { expense: 600, category: 'Vbhaai', merchant: '', message: 'Vishakh bhai travel', payment_method: 'UPI', date_time: '2026-08-25T11:36:58.746Z' },
-        { expense: 80, category: 'Vbhaai', merchant: '', message: 'Extra vishakh', payment_method: 'UPI', date_time: '2026-08-26T01:43:58.554Z' },
-        { expense: 50, category: 'Fast Food & Swiggy', merchant: '', message: 'Ajja food', payment_method: 'UPI', date_time: '2026-08-26T06:55:30.611Z' },
-        { expense: 87, category: 'Fast Food & Swiggy', merchant: '', message: 'College food', payment_method: 'UPI', date_time: '2026-08-27T06:19:27.826Z' },
-        { expense: 60, category: 'Fast Food & Swiggy', merchant: '', message: 'College today', payment_method: 'UPI', date_time: '2026-08-27T07:56:18.503Z' },
-        { expense: 40, category: 'Fast Food & Swiggy', merchant: '', message: '', payment_method: 'UPI', date_time: '2026-08-27T13:23:56.303Z' },
-        { expense: 1, category: 'Bills', merchant: '', message: 'Extra test', payment_method: 'Cash', date_time: '2026-08-27T16:37:01.534Z' },
-        { expense: 150, category: 'Food', merchant: '', message: 'Food again', payment_method: 'UPI', date_time: '2026-08-28T09:03:49.956Z' },
-        { expense: 40, category: 'Food', merchant: '', message: '', payment_method: 'UPI', date_time: '2026-08-29T07:46:13.618Z' },
-        { expense: 208, category: 'Food', merchant: '', message: 'Big fat roll pratheek', payment_method: 'UPI', date_time: '2026-08-31T07:41:59.537Z' },
-        { expense: 40, category: 'Food', merchant: '', message: '', payment_method: 'UPI', date_time: '2026-09-01T06:09:13.218Z' },
-        { expense: 30, category: 'Food', merchant: '', message: '', payment_method: 'UPI', date_time: '2026-09-01T07:39:00.525Z' },
-      ];
-
-      const runSeederTx = async () => {
-        for (const item of seedData) {
-          await db.runAsync(
-            `INSERT INTO expenses (category, expense, date_time, message, merchant, payment_method, is_recurring, sync_status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?);`,
-            [item.category, item.expense, item.date_time, item.message, item.merchant, item.payment_method, item.date_time, item.date_time]
-          );
-        }
-      };
-
-      if (typeof db.withTransactionAsync === 'function') {
-        await db.withTransactionAsync(runSeederTx);
-      } else {
-        await runSeederTx();
-      }
-      console.log('[SQLite] Historical transactions seeded successfully.');
-    }
-
-    // Set monthly budget to 1000 in budgets table if not already present
-    const budgetCountRes = await db.getFirstAsync(`SELECT COUNT(*) as count FROM budgets WHERE is_overall = 1;`);
-    if ((budgetCountRes?.count ?? 0) === 0) {
-      await db.runAsync(
-        `INSERT INTO budgets (category, monthly_limit, is_overall) VALUES (?, ?, ?);`,
-        ['overall', 1000, 1]
-      );
-      console.log('[SQLite] Default monthly budget of 1000 set.');
-    }
-
-    console.log('[SQLite] Database initialized successfully');
+    console.log('[SQLite] Database initialized cleanly with fresh tables.');
     return { success: true };
   } catch (error) {
     console.error('[SQLite] Error initializing database:', error);
